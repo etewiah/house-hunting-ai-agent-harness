@@ -15,8 +15,14 @@ from src.skills.tour_prep import generate_tour_questions
 
 
 class HouseHuntOrchestrator:
-    def __init__(self, listings: MockListingApi, trace_dir: str = ".traces") -> None:
+    def __init__(
+        self,
+        listings: MockListingApi,
+        trace_dir: str = ".traces",
+        h2c_connector: object | None = None,
+    ) -> None:
         self.listings = listings
+        self.h2c_connector = h2c_connector
         self.state = SessionState()
         self.tracer = TraceRecorder(trace_dir)
 
@@ -45,6 +51,16 @@ class HouseHuntOrchestrator:
         output = compare_homes(listings)
         self.tracer.record("comparison.summary", output)
         return output
+
+    def create_comparison(self, count: int = 2) -> dict[str, object]:
+        if self.h2c_connector is None:
+            return {"status": "skipped", "reason": "HomesToCompare connector not configured."}
+        if len(self.state.ranked_listings) < count:
+            return {"status": "skipped", "reason": f"Need at least {count} ranked listings to compare."}
+        top = [item.listing for item in self.state.ranked_listings[:count]]
+        result = self.h2c_connector.create_comparison(top)
+        self.tracer.record("comparison.created", result)
+        return result
 
     def prep_next_steps(self) -> dict[str, object]:
         if not self.state.ranked_listings:

@@ -4,6 +4,16 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+from typing import Literal
+
+TraceEventName = Literal[
+    "intake.profile_created",
+    "triage.ranked_listings",
+    "triage.explanations",
+    "comparison.summary",
+    "comparison.created",
+    "next_steps.prepared",
+]
 
 
 class TraceRecorder:
@@ -11,7 +21,7 @@ class TraceRecorder:
         self.output_dir = Path(output_dir)
         self.events: list[dict[str, object]] = []
 
-    def record(self, name: str, payload: object) -> None:
+    def record(self, name: TraceEventName, payload: object) -> None:
         self.events.append(
             {
                 "at": datetime.now(timezone.utc).isoformat(),

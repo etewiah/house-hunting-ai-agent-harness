@@ -1,4 +1,8 @@
-from src.harness.policies import advice_boundary_notice, check_guardrails
+from src.harness.policies import (
+    advice_boundary_notice,
+    check_generated_recommendation_language,
+    check_guardrails,
+)
 from src.skills.offer_brief import generate_offer_brief
 from src.connectors.mock_listing_api import MockListingApi
 
@@ -18,3 +22,11 @@ def test_offer_brief_contains_boundary():
     assert "legal" in brief.lower()
     assert "mortgage" in brief.lower()
     assert check_guardrails("This is legal advice") == ["legal advice"]
+
+
+def test_fair_housing_terms_detected_in_generated_recommendations():
+    violations = check_generated_recommendation_language(
+        "This is a safe neighbourhood with good schools nearby."
+    )
+    assert "safe neighbourhood" in violations
+    assert "good schools nearby" in violations

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
 import re
+from typing import Protocol
 from src.models.schemas import BuyerProfile
 
 
@@ -25,7 +28,43 @@ def _extract_commute(text: str) -> int | None:
     return None
 
 
-def parse_buyer_brief(text: str) -> BuyerProfile:
+class LlmAdapter(Protocol):
+    def generate(self, prompt: str, model: str) -> str: ...
+
+
+_INTAKE_PROMPT = """Extract a buyer profile from this house-hunting brief.
+Return only JSON with keys: location_query, max_budget, min_bedrooms,
+max_commute_minutes, must_haves, nice_to_haves, quiet_street_required.
+
+Brief:
+{brief}
+"""
+
+
+def parse_buyer_brief(text: str, llm: LlmAdapter | None = None) -> BuyerProfile:
+    if llm is not None:
+        return _parse_with_llm(text, llm)
+    return _parse_with_regex(text)
+
+
+def _parse_with_llm(text: str, llm: LlmAdapter) -> BuyerProfile:
+    raw = llm.generate(
+        _INTAKE_PROMPT.format(brief=text),
+        model=os.getenv("BUYER_AGENT_INTAKE_MODEL", "claude-haiku-4-5"),
+    )
+    parsed = json.loads(raw.strip())
+    return BuyerProfile(
+        location_query=parsed.get("location_query", "unknown"),
+        max_budget=int(parsed.get("max_budget") or _extract_budget(text)),
+        min_bedrooms=int(parsed.get("min_bedrooms") or _extract_bedrooms(text)),
+        max_commute_minutes=parsed.get("max_commute_minutes") or _extract_commute(text),
+        must_haves=list(parsed.get("must_haves") or []),
+        nice_to_haves=list(parsed.get("nice_to_haves") or []),
+        quiet_street_required=bool(parsed.get("quiet_street_required", False)),
+    )
+
+
+def _parse_with_regex(text: str) -> BuyerProfile:
     lowered = text.lower()
     must_haves: list[str] = []
     nice_to_haves: list[str] = []
