@@ -65,16 +65,19 @@ def _fmt_affordability(est: AffordabilityEstimate) -> str:
 def run_interactive() -> None:
     print(_WELCOME)
 
-    try:
-        app = build_app()
-    except RuntimeError as exc:
-        print(f"Configuration error: {exc}")
-        return
+    app = build_app()
 
     if app.llm is not None:
         print("AI intake enabled. Type your search below.\n")
     else:
         print("Regex intake enabled. Set ANTHROPIC_API_KEY for AI-powered intake.\n")
+
+    if app.listings is None:
+        print(
+            "No listing provider configured for the standalone CLI. "
+            "This harness can still be used by a coding agent that finds listings with browser tools "
+            "and passes them into app.triage_listings(...).\n"
+        )
 
     while True:
         try:
@@ -104,7 +107,11 @@ def run_interactive() -> None:
         print("\nLet's try again — be as specific as you like.\n")
 
     print("\nSearching listings...\n")
-    ranked = app.triage(limit=5)
+    try:
+        ranked = app.triage(limit=5)
+    except ValueError as exc:
+        print(str(exc))
+        return
 
     for warning in app.state.triage_warnings:
         print(f"Note: {warning}\n")

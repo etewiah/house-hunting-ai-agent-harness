@@ -25,14 +25,11 @@ def build_app() -> HouseHuntOrchestrator:
     )
 
 
-def _load_listing_provider(config) -> ListingProvider:
+def _load_listing_provider(config) -> ListingProvider | None:
     if config.h2c_read_key:
         return H2CListingConnector(config.h2c_base_url, config.h2c_read_key)
 
     if config.listings_csv_path:
         return LocalCsvListingConnector(config.listings_csv_path)
 
-    raise RuntimeError(
-        "No listing provider configured. Set H2C_READ_KEY for HomesToCompare search "
-        "or LISTINGS_CSV_PATH to an explicit CSV export."
-    )
+    return None

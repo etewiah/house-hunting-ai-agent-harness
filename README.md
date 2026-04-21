@@ -50,7 +50,7 @@ Useful direct entry points:
 
 | Entry point | What it does |
 |---|---|
-| `uv run house-hunt` | Starts an interactive search using the configured listing provider |
+| `uv run house-hunt` | Starts an interactive CLI; direct search requires a configured listing provider |
 | `uv run --extra dev pytest` | Runs the eval suite |
 | `.codex/skills/run-house-hunt/SKILL.md` | Codex skill for running the full buyer brief pipeline |
 | `src/skills/*` | Repo-native skills for intake, ranking, comparison, exports, and next steps |
@@ -78,10 +78,11 @@ uv run house-hunt
 
 **With an Anthropic API key** (`ANTHROPIC_API_KEY` set in your environment), the CLI uses Claude for intake and explanations — it understands natural language properly and gives conversational, specific explanations for each match.
 
-The CLI needs a listing provider. Set `H2C_READ_KEY` for HomesToCompare search, or
-set `LISTINGS_CSV_PATH` to a CSV export with `Listing` fields. Without an LLM key,
-intake falls back to regex parsing; listing search still comes from the configured
-provider.
+The standalone CLI needs a listing provider for direct search. Set `H2C_READ_KEY` for HomesToCompare search, or
+set `LISTINGS_CSV_PATH` to a CSV export with `Listing` fields. In coding-agent workflows,
+the listing provider is optional: the agent can find listings with browser tools or other
+sources, normalize them into `Listing` objects, and pass them into the harness for ranking,
+comparison, explanation, and export. Without an LLM key, intake falls back to regex parsing.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...

@@ -4,12 +4,13 @@ from src.harness.policies import advice_boundary_notice, check_output_guardrails
 from src.harness.session_state import SessionState
 from src.harness.tracing import TraceRecorder
 from src.models.capabilities import ListingProvider
-from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, RankedListing
+from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, Listing, RankedListing
 from src.skills.export import ExportOrchestrator
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes
 from src.skills.explanation import explain_ranked_listing
 from src.skills.intake import parse_buyer_brief
+from src.skills.listing_search import filter_by_location, filter_listings
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings
 from src.skills.tour_prep import generate_tour_questions
@@ -18,7 +19,7 @@ from src.skills.tour_prep import generate_tour_questions
 class HouseHuntOrchestrator:
     def __init__(
         self,
-        listings: ListingProvider,
+        listings: ListingProvider | None,
         trace_dir: str = ".traces",
         h2c_connector: object | None = None,
         llm: object | None = None,
@@ -39,11 +40,26 @@ class HouseHuntOrchestrator:
     def triage(self, limit: int = 5) -> list[RankedListing]:
         if self.state.buyer_profile is None:
             raise ValueError("Cannot triage listings before preference intake.")
+        if self.listings is None:
+            raise ValueError(
+                "No listing provider configured. In browser-assisted or coding-agent workflows, "
+                "gather listings externally and call triage_listings(candidates)."
+            )
         candidates = self.listings.search(self.state.buyer_profile)
-        self.state.triage_warnings = []
-        ranked = rank_listings(self.state.buyer_profile, candidates)[:limit]
+        return self.triage_listings(candidates, limit=limit)
+
+    def triage_listings(self, candidates: list[Listing], limit: int = 5) -> list[RankedListing]:
+        if self.state.buyer_profile is None:
+            raise ValueError("Cannot triage listings before preference intake.")
+        located, location_warnings = filter_by_location(self.state.buyer_profile.location_query, candidates)
+        filtered = filter_listings(self.state.buyer_profile, located)
+        self.state.triage_warnings = location_warnings
+        ranked = rank_listings(self.state.buyer_profile, filtered)[:limit]
         self.state.ranked_listings = ranked
-        self.tracer.record("triage.ranked_listings", ranked)
+        self.tracer.record(
+            "triage.ranked_listings",
+            {"warnings": location_warnings, "count": len(ranked), "items": ranked},
+        )
         return ranked
 
     def explain_top_matches(self) -> list[str]:

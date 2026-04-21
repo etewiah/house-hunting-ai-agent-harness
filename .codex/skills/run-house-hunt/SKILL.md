@@ -1,6 +1,6 @@
 ---
 name: run-house-hunt
-description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, affordability, and tour prep. Requires a configured listing provider or explicitly supplied listings.
+description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, affordability, and tour prep. A configured listing provider is optional when the agent can supply listings it found elsewhere.
 metadata:
   tags: house-hunt, harness, ranking, comparison, buyer-agent
 ---
@@ -14,7 +14,7 @@ Run the full buyer-agent pipeline from a plain-English brief: parse preferences,
 - Python 3.10+ and `uv`
 - Run commands from the harness root
 - No model provider key is required when an LLM agent is using this skill; the agent supplies the reasoning. If `ANTHROPIC_API_KEY` is exported, the standalone harness may use its optional Anthropic adapter for intake and explanations.
-- A listing provider is required. Set `H2C_READ_KEY` for HomesToCompare search, set `LISTINGS_CSV_PATH` for an explicit CSV export, or normalize user-provided listings into `Listing` objects and run the individual skills.
+- A listing provider is optional. Set `H2C_READ_KEY` for HomesToCompare search, set `LISTINGS_CSV_PATH` for an explicit CSV export, or have the agent gather listings with browser tools / external sources, normalize them into `Listing` objects, and call the harness with those supplied listings.
 
 ## Your task
 
@@ -108,7 +108,7 @@ Show the user:
 | Error | Cause | Fix |
 |---|---|---|
 | `ModuleNotFoundError: src` | Not running from harness root | `cd house-hunting-ai-agent-harness` first |
-| `No listing provider configured` | Neither `H2C_READ_KEY` nor `LISTINGS_CSV_PATH` is set | Configure HomesToCompare search or pass an explicit CSV export |
+| `No listing provider configured` | Neither `H2C_READ_KEY` nor `LISTINGS_CSV_PATH` is set | For CLI search, configure a provider; for agent workflows, gather listings externally and pass them into the harness |
 | `No listings matched` | The configured provider returned no candidates | Relax the brief or inspect provider/API filters |
 | Regex-style intake/explanations | No standalone harness LLM adapter configured | Expected for agent-driven use; the calling LLM agent can interpret and summarize results |
 
