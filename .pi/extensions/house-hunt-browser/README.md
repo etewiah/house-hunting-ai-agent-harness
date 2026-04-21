@@ -39,6 +39,19 @@ cd .pi/extensions/house-hunt-browser
 npm test
 ```
 
+## Capture a fixture
+
+Inspired by `property_web_scraper`, you can capture or save HTML fixtures for parser work:
+
+```bash
+cd .pi/extensions/house-hunt-browser
+npm run capture-fixture -- https://www.rightmove.co.uk/properties/123456789
+npm run capture-fixture -- --file saved-page.html --url https://www.zoopla.co.uk/for-sale/details/42/
+cat rendered.html | npm run capture-fixture -- --stdin --url https://www.onthemarket.com/details/7/
+```
+
+This saves the HTML under `test/fixtures/` and prints a suggested test stub.
+
 ## Notes
 
 - Search currently uses DuckDuckGo HTML results and then filters to known property hosts.
