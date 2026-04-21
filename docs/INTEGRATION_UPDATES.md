@@ -74,9 +74,9 @@ H2C_BASE_URL=https://homestocompare.com
 
 ## 2. Real listing connector — Supabase/HTTP
 
-**Current state:** `MockListingApi` reads from a local JSONL file. When the harness ranks listings, candidates are static fixtures.
+**Current state:** listing search is provider-backed. `H2CListingConnector` fetches HomesToCompare listings, and `LocalCsvListingConnector` reads explicit CSV exports.
 
-**Required change:** Add a `HomesToCompareListingConnector` that fetches real listings from the HomesToCompare API, enabling end-to-end Python demos with live data.
+**Required change:** Keep listing search provider-backed; do not add built-in fixture fallbacks.
 
 ### `src/connectors/h2c_listing_connector.py` *(new)*
 
@@ -156,7 +156,7 @@ Add parameter to `__init__`:
 ```python
 def __init__(
     self,
-    listings: MockListingApi,
+    listings: ListingProvider,
     trace_dir: str = ".traces",
     h2c_connector: HomesToCompareConnector | None = None,
 ) -> None:
@@ -192,7 +192,7 @@ def create_comparison(self, count: int = 2) -> dict[str, object]:
 
 **Current state:** `parse_buyer_brief()` uses regex heuristics. It fails on non-standard phrasing and has a hardcoded location list containing only "King's Cross."
 
-**Recommended change:** Add an optional `llm_adapter` parameter. When provided, use it for extraction. When absent, fall back to the existing regex (preserves CLI demo with no API key).
+**Recommended change:** Add an optional `llm_adapter` parameter. When provided, use it for extraction. When absent, fall back to the existing regex.
 
 ### Changes to `src/skills/intake.py`
 
@@ -245,16 +245,11 @@ def _parse_with_regex(text: str) -> BuyerProfile:
 
 ---
 
-## 5. Models — add `commute_minutes` to `.env.example` and listings fixture
+## 5. Models — missing commute coverage
 
-**Current state:** `commute_minutes` is `None` for most real listings. The existing fixtures have it set. This mismatch means the `warnings` array in `RankedListing` always contains `"commute time missing"` in production.
+**Current state:** `commute_minutes` is `None` for most real listings. This means the `warnings` array in `RankedListing` can contain `"commute time missing"` in production.
 
-**Recommended change:** Update `evals/datasets/listings_small.jsonl` to include one listing with `commute_minutes: null` to ensure the warning path is covered in tests.
-
-Add to fixtures:
-```json
-{"id":"L005","title":"Convenient Central Flat","price":550000,"bedrooms":2,"bathrooms":1,"location":"Hackney","commute_minutes":null,"features":["walkable","station"],"description":"Two-bed flat with no commute data available.","source_url":"https://example.com/listings/L005"}
-```
+**Recommended change:** Keep inline test listings with `commute_minutes=None` to ensure the warning path is covered without bundled listing fixtures.
 
 **Add test to `evals/tests/test_ranking.py`:**
 ```python
@@ -358,11 +353,14 @@ To use it:
 ```python
 from src.connectors.homestocompare_connector import HomesToCompareConnector
 from src.harness.orchestrator import HouseHuntOrchestrator
-from src.connectors.mock_listing_api import MockListingApi
+from src.connectors.homestocompare_connector import H2CListingConnector
 
 connector = HomesToCompareConnector(service_key=os.environ["H2C_SERVICE_KEY"])
 orchestrator = HouseHuntOrchestrator(
-    listings=MockListingApi("evals/datasets/listings_small.jsonl"),
+    listings=H2CListingConnector(
+        base_url=os.environ["H2C_BASE_URL"],
+        read_key=os.environ["H2C_READ_KEY"],
+    ),
     h2c_connector=connector,
 )
 orchestrator.intake("3-bed near schools, budget £650k, 45 min to London")
@@ -377,11 +375,11 @@ side-by-side comparison at `homestocompare.com/pc/{id}/overview`.
 
 ---
 
-## 9. CLI demo — extend to show comparison URL
+## 9. CLI search — extend to show comparison URL
 
-**Current state:** `src/ui/cli.py` runs the full demo workflow but does not call `create_comparison`.
+**Current state:** `src/ui/cli.py` runs the interactive search workflow but does not call `create_comparison`.
 
-**Required change:** Optionally call `create_comparison` at the end of the demo if `H2C_SERVICE_KEY` is set.
+**Required change:** Optionally call `create_comparison` at the end of a search if `H2C_SERVICE_KEY` is set.
 
 ### Changes to `src/ui/cli.py`
 
@@ -396,7 +394,7 @@ def main() -> None:
     connector = HomesToCompareConnector(h2c_key) if h2c_key else None
     
     orchestrator = HouseHuntOrchestrator(
-        listings=MockListingApi(cfg.listings_data_path),
+        listings=listing_provider,
         trace_dir=cfg.trace_output_dir,
         h2c_connector=connector,
     )
@@ -440,7 +438,6 @@ The harness `H2CListingConnector._row_to_listing()` is written against this resp
 | `src/skills/intake.py` | modified — add optional `llm` adapter parameter | v0.2 |
 | `src/harness/policies.py` | modified — add fair housing terms | v0.2 |
 | `src/harness/tracing.py` | modified — add `EventName` literal type | v0.2 |
-| `evals/datasets/listings_small.jsonl` | modified — add L005 with null commute | immediately |
 | `evals/tests/test_ranking.py` | modified — add null commute test | immediately |
 | `evals/tests/test_guardrails.py` | modified — add fair housing test | v0.2 |
 | `.env.example` | modified — add H2C vars | immediately |

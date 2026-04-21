@@ -1,7 +1,7 @@
-.PHONY: demo test lint harness-check
+.PHONY: search test lint harness-check
 
-demo:
-	python -m src.ui.cli demo
+search:
+	python -m src.ui.cli search
 
 test:
 	pytest

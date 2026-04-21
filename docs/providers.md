@@ -21,7 +21,7 @@ If `LLM_PROVIDER` is not set, the harness picks a provider automatically:
 
 1. `ANTHROPIC_API_KEY` is set → Anthropic (Claude)
 2. `OPENAI_API_KEY` or `OPENAI_BASE_URL` is set → OpenAI-compatible
-3. Neither → demo mode (regex parsing, no AI)
+3. Neither → regex parsing, no AI
 
 ## Anthropic (Claude) — recommended
 

@@ -1,2 +1,1 @@
-"""CLI and demo UI entry points."""
-
+"""CLI and UI entry points."""

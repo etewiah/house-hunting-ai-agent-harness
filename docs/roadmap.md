@@ -2,8 +2,8 @@
 
 ## v0.1
 
-- CLI demo
-- Mock listing dataset
+- CLI search
+- Provider-backed listing search
 - Preference intake
 - Listing ranking and explanations
 - Comparison workspace
@@ -13,7 +13,7 @@
 
 ## v0.2
 
-- Web demo
+- Web search UI
 - Better trace viewer
 - Optional MCP connector example
 - Market watch scheduler

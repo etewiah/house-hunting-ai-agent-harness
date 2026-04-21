@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from src.connectors.mock_listing_api import MockListingApi
 from src.harness.policies import advice_boundary_notice, check_output_guardrails
 from src.harness.session_state import SessionState
 from src.harness.tracing import TraceRecorder
+from src.models.capabilities import ListingProvider
 from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, RankedListing
 from src.skills.export import ExportOrchestrator
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes
 from src.skills.explanation import explain_ranked_listing
 from src.skills.intake import parse_buyer_brief
-from src.skills.listing_search import filter_by_location
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings
 from src.skills.tour_prep import generate_tour_questions
@@ -19,7 +18,7 @@ from src.skills.tour_prep import generate_tour_questions
 class HouseHuntOrchestrator:
     def __init__(
         self,
-        listings: MockListingApi,
+        listings: ListingProvider,
         trace_dir: str = ".traces",
         h2c_connector: object | None = None,
         llm: object | None = None,
@@ -40,16 +39,8 @@ class HouseHuntOrchestrator:
     def triage(self, limit: int = 5) -> list[RankedListing]:
         if self.state.buyer_profile is None:
             raise ValueError("Cannot triage listings before preference intake.")
-        # Location filter runs on all listings so city resolution works regardless of price.
-        # Price/bedroom filter is applied after, scoped to the matched city.
-        all_listings = self.listings.all()
-        located, warnings = filter_by_location(self.state.buyer_profile.location_query, all_listings)
-        self.state.triage_warnings = warnings
-        candidates = [
-            listing for listing in located
-            if listing.price <= self.state.buyer_profile.max_budget * 1.1
-            and listing.bedrooms >= max(1, self.state.buyer_profile.min_bedrooms - 1)
-        ]
+        candidates = self.listings.search(self.state.buyer_profile)
+        self.state.triage_warnings = []
         ranked = rank_listings(self.state.buyer_profile, candidates)[:limit]
         self.state.ranked_listings = ranked
         self.tracer.record("triage.ranked_listings", ranked)

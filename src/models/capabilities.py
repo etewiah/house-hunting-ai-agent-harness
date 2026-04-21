@@ -4,6 +4,7 @@ from typing import Protocol
 
 from src.models.schemas import (
     AreaData,
+    BuyerProfile,
     CommuteEstimate,
     ExportOptions,
     ExportPayload,
@@ -12,6 +13,13 @@ from src.models.schemas import (
     Listing,
     Session,
 )
+
+
+class ListingProvider(Protocol):
+    name: str
+
+    def search(self, profile: BuyerProfile, limit: int = 200) -> list[Listing]:
+        ...
 
 
 class CommuteProvider(Protocol):

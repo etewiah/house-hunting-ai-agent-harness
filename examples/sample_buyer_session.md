@@ -7,9 +7,8 @@ Brief:
 Expected flow:
 
 1. Parse structured buyer profile.
-2. Search mock listings.
+2. Search the configured listing provider.
 3. Rank candidates.
 4. Explain top matches.
 5. Compare top 3.
 6. Generate tour questions and offer-prep brief.
-

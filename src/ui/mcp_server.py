@@ -13,7 +13,6 @@ from dataclasses import asdict
 
 from mcp.server.fastmcp import FastMCP
 
-from src.app import build_app
 from src.models.schemas import Listing
 from src.models.schemas import ExportOptions, ExportPayload, RankedListing
 from src.skills.affordability import estimate_monthly_payment
@@ -166,28 +165,6 @@ def export_html(ranked_listings: list[dict], output_path: str | None = None) -> 
         ExportOptions(format="html", output_path=output_path),
     )
     return asdict(result)
-
-
-@mcp.tool()
-def search_demo_listings(brief: str) -> list[dict]:
-    """Search the built-in demo dataset (mock listings across London, Manchester,
-    Bristol, Leeds). Useful for testing the harness without a live data source.
-
-    Returns ranked listings matching the brief.
-    """
-    app = build_app()
-    app.intake(brief)
-    ranked = app.triage(limit=10)
-    return [
-        {
-            "listing": asdict(r.listing),
-            "score": r.score,
-            "matched": r.matched,
-            "missed": r.missed,
-            "warnings": r.warnings,
-        }
-        for r in ranked
-    ]
 
 
 if __name__ == "__main__":

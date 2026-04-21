@@ -11,7 +11,7 @@ def load_llm():
       2. ANTHROPIC_API_KEY present → AnthropicAdapter
       3. OPENAI_API_KEY present → OpenAIAdapter
       4. OPENAI_BASE_URL present (local/Ollama, no key needed) → OpenAIAdapter
-      5. None → demo mode (regex fallback)
+      5. None → regex fallback
 
     Environment variables:
       LLM_PROVIDER        anthropic | openai | ollama | groq | together | lm_studio

@@ -36,7 +36,7 @@ The harness owns orchestration:
 Connectors hide external systems:
 
 - local files
-- mock listing APIs
+- provider listing APIs
 - optional MCP tools
 - maps, schools, calendars, and notification services
 

@@ -50,9 +50,7 @@ Useful direct entry points:
 
 | Entry point | What it does |
 |---|---|
-| `uv run house-hunt demo` | Runs the built-in demo dataset |
-| `uv run house-hunt demo --export-path report.html` | Writes a self-contained HTML report |
-| `uv run house-hunt demo --export-path shortlist.csv` | Writes a CSV shortlist |
+| `uv run house-hunt` | Starts an interactive search using the configured listing provider |
 | `uv run --extra dev pytest` | Runs the eval suite |
 | `.codex/skills/run-house-hunt/SKILL.md` | Codex skill for running the full buyer brief pipeline |
 | `src/skills/*` | Repo-native skills for intake, ranking, comparison, exports, and next steps |
@@ -80,7 +78,10 @@ uv run house-hunt
 
 **With an Anthropic API key** (`ANTHROPIC_API_KEY` set in your environment), the CLI uses Claude for intake and explanations — it understands natural language properly and gives conversational, specific explanations for each match.
 
-**Without a key**, it falls back to regex parsing and mock listings — useful for testing but not a real product experience.
+The CLI needs a listing provider. Set `H2C_READ_KEY` for HomesToCompare search, or
+set `LISTINGS_CSV_PATH` to a CSV export with `Listing` fields. Without an LLM key,
+intake falls back to regex parsing; listing search still comes from the configured
+provider.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -92,10 +93,6 @@ Type your search in plain English:
 - `"3-bed in Bristol, budget £400k, need parking and good schools"`
 - `"2-bed flat, max 20 min commute to London Bridge, under £500k"`
 - `"somewhere quiet in Leeds with a garden, 4 beds, around £300k"`
-
-> **Note:** the built-in listing dataset is mock data across London, Manchester, Bristol,
-> and Leeds. For live listings, connect a listing connector, import CSV data, or have an
-> agent normalize retrieved listings into `Listing` objects.
 
 ---
 
@@ -130,16 +127,18 @@ uv run --extra dev pytest
 src/
   skills/       intake, ranking, explanation, comparison, affordability, tour prep, offer brief
   harness/      orchestration, session state, policies, tracing, approvals
-  connectors/   mock API, local CSV, optional MCP stub, HomesToCompare connector
+  connectors/   local CSV, optional MCP stub, HomesToCompare connector
   ui/           CLI, web demo stub
 evals/
   tests/        eval suite
-  datasets/     mock listing fixtures
+  datasets/     buyer profile and comparison fixtures
 ```
 
 ### Connecting real listings
 
-Implement the `search(profile: BuyerProfile) -> list[Listing]` interface in `src/connectors/` and pass it to `HouseHuntOrchestrator`. The mock connector in `src/connectors/mock_listing_api.py` is the reference implementation.
+Implement the `search(profile: BuyerProfile, limit: int = 200) -> list[Listing]`
+interface in `src/connectors/` and pass it to `HouseHuntOrchestrator`. Existing
+examples are `H2CListingConnector` and `LocalCsvListingConnector`.
 
 ### Optional MCP server
 
@@ -186,6 +185,6 @@ The agent will never present itself as a lawyer, mortgage adviser, surveyor, ins
 
 ## v0.1 scope
 
-Included: CLI, mock listings, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, and connector stubs.
+Included: CLI, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, and connector stubs.
 
-Not included: live listing feeds, autonomous browsing, outbound calls, negotiation automation, legal or mortgage advice, transaction management.
+Not included: autonomous browsing, negotiation automation, legal or mortgage advice, transaction management.

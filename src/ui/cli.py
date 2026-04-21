@@ -1,11 +1,7 @@
 import argparse
-from src.app import build_app
-from src.models.schemas import AffordabilityEstimate, BuyerProfile, ExportOptions, RankedListing
 
-DEFAULT_BRIEF = (
-    "I want a 3-bed within 45 minutes of King's Cross, budget £700k, "
-    "walkable area, quiet street, decent garden."
-)
+from src.app import build_app
+from src.models.schemas import AffordabilityEstimate, BuyerProfile, RankedListing
 
 _WELCOME = """\
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -69,12 +65,16 @@ def _fmt_affordability(est: AffordabilityEstimate) -> str:
 def run_interactive() -> None:
     print(_WELCOME)
 
-    app = build_app()
+    try:
+        app = build_app()
+    except RuntimeError as exc:
+        print(f"Configuration error: {exc}")
+        return
+
     if app.llm is not None:
-        print("Powered by Claude. Type your search below.\n")
+        print("AI intake enabled. Type your search below.\n")
     else:
-        print("Demo mode (mock data, regex parsing).")
-        print("Set ANTHROPIC_API_KEY for AI-powered search.\n")
+        print("Regex intake enabled. Set ANTHROPIC_API_KEY for AI-powered intake.\n")
 
     while True:
         try:
@@ -110,7 +110,7 @@ def run_interactive() -> None:
         print(f"Note: {warning}\n")
 
     if not ranked:
-        print("No listings matched your brief in the current dataset.")
+        print("No listings matched your brief from the configured listing provider.")
         print("Try relaxing your budget or commute requirements.")
         return
 
@@ -142,37 +142,6 @@ def run_interactive() -> None:
     print(f"Session trace saved to {trace_path}")
 
 
-def run_demo(export_path: str | None = None) -> None:
-    print(f"Demo brief: {DEFAULT_BRIEF!r}\n")
-    app = build_app()
-    profile = app.intake(DEFAULT_BRIEF)
-    ranked = app.triage(limit=3)
-    explanations = app.explain_top_matches()
-    comparison = app.compare_top(count=3)
-    next_steps = app.prep_next_steps()
-    export_result = None
-    if export_path is not None:
-        export_format = "html" if export_path.endswith(".html") else "csv"
-        export_result = app.export(ExportOptions(format=export_format, output_path=export_path))
-    trace_path = app.tracer.flush("demo")
-
-    print("## Buyer Profile\n")
-    print(_fmt_profile(profile))
-    print("\n## Ranked Listings\n")
-    print(_fmt_ranked(ranked))
-    print("## Explanations\n")
-    for explanation in explanations:
-        print(f"  {explanation}\n")
-    print("## Comparison\n")
-    print(comparison)
-    print("\n## Affordability (top match)\n")
-    print(_fmt_affordability(next_steps["affordability"]))
-    if export_result is not None:
-        print("\n## Export\n")
-        print(f"{export_result.format.upper()} written to {export_result.output_path}")
-    print(f"\nTrace written to {trace_path}")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="house-hunt",
@@ -182,21 +151,18 @@ def main() -> None:
         "command",
         nargs="?",
         default="search",
-        choices=["search", "demo", "serve"],
+        choices=["search", "serve"],
         help=(
             "'search' (default) starts an interactive session; "
-            "'demo' runs a fixed example; "
             "'serve' starts the optional MCP server"
         ),
     )
     parser.add_argument(
         "--export-path",
-        help="Write demo results to a CSV or HTML file. Currently supported with the demo command.",
+        help="Reserved for future non-interactive export commands.",
     )
     args = parser.parse_args()
-    if args.command == "demo":
-        run_demo(export_path=args.export_path)
-    elif args.command == "serve":
+    if args.command == "serve":
         from src.ui.mcp_server import mcp
         mcp.run()
     else:

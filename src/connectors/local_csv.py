@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from src.models.schemas import Listing
+
+from src.models.schemas import BuyerProfile, Listing
+from src.skills.listing_search import filter_by_location, filter_listings
 
 
 def load_listings_csv(path: str) -> list[Listing]:
@@ -24,3 +26,17 @@ def load_listings_csv(path: str) -> list[Listing]:
                 )
             )
     return listings
+
+
+class LocalCsvListingConnector:
+    name = "local_csv"
+
+    def __init__(self, path: str) -> None:
+        self.path = Path(path)
+
+    def search(self, profile: BuyerProfile, limit: int = 200) -> list[Listing]:
+        if not self.path.exists():
+            raise FileNotFoundError(f"Listing CSV not found: {self.path}")
+        listings = load_listings_csv(str(self.path))
+        located, _warnings = filter_by_location(profile.location_query, listings)
+        return filter_listings(profile, located)[:limit]

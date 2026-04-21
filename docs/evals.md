@@ -13,7 +13,6 @@ The repo should measure behavior from day one.
 ## Dataset Files
 
 - `evals/datasets/buyer_profiles.jsonl`
-- `evals/datasets/listings_small.jsonl`
 - `evals/datasets/comparison_cases.jsonl`
 
 ## Useful Metrics

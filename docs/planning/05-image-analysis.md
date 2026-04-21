@@ -127,6 +127,6 @@ HomesToCompare image fields are one possible source, not a core requirement.
 
 ## Open Questions
 
-- Should image analysis be enabled by default for local demos, or always require a flag?
+- Should image analysis be enabled by default for local CSV runs, or always require a flag?
 - Should primary images always be included before secondary images?
 - Should user feedback on false positives be stored for future prompt tuning?

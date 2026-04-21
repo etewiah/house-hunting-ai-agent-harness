@@ -1,6 +1,6 @@
 ---
 name: run-house-hunt
-description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, affordability, and tour prep. No HTTP server, browser, or external model API key needed.
+description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, affordability, and tour prep. Requires a configured listing provider or explicitly supplied listings.
 metadata:
   tags: house-hunt, harness, ranking, comparison, buyer-agent
 ---
@@ -14,7 +14,7 @@ Run the full buyer-agent pipeline from a plain-English brief: parse preferences,
 - Python 3.10+ and `uv`
 - Run commands from the harness root
 - No model provider key is required when an LLM agent is using this skill; the agent supplies the reasoning. If `ANTHROPIC_API_KEY` is exported, the standalone harness may use its optional Anthropic adapter for intake and explanations.
-- No HomesToCompare API key is required for this skill; it uses local harness functions and mock or provided listing data.
+- A listing provider is required. Set `H2C_READ_KEY` for HomesToCompare search, set `LISTINGS_CSV_PATH` for an explicit CSV export, or normalize user-provided listings into `Listing` objects and run the individual skills.
 
 ## Your task
 
@@ -92,12 +92,7 @@ Replace `BRIEF_GOES_HERE` with the actual buyer brief.
 
 ### Step 3 — Export results (optional)
 
-```bash
-uv run house-hunt demo --export-path results.csv
-uv run house-hunt demo --export-path results.html
-```
-
-Or via Python, pass `ExportOptions` directly to `app.export()`.
+Via Python, pass `ExportOptions` directly to `app.export()` after ranking results.
 
 ### Step 4 — Report back
 
@@ -113,7 +108,8 @@ Show the user:
 | Error | Cause | Fix |
 |---|---|---|
 | `ModuleNotFoundError: src` | Not running from harness root | `cd house-hunting-ai-agent-harness` first |
-| `No listings matched` | Location query too specific for mock data | Try London/King's Cross, Manchester, Bristol, or Leeds examples |
+| `No listing provider configured` | Neither `H2C_READ_KEY` nor `LISTINGS_CSV_PATH` is set | Configure HomesToCompare search or pass an explicit CSV export |
+| `No listings matched` | The configured provider returned no candidates | Relax the brief or inspect provider/API filters |
 | Regex-style intake/explanations | No standalone harness LLM adapter configured | Expected for agent-driven use; the calling LLM agent can interpret and summarize results |
 
 ## Key files
@@ -124,5 +120,4 @@ Show the user:
 | `src/harness/orchestrator.py` | Full pipeline: intake → triage → explain → compare → next steps |
 | `src/skills/intake.py` | Brief → BuyerProfile (regex or LLM) |
 | `src/skills/ranking.py` | Score listings against profile |
-| `evals/datasets/listings_small.jsonl` | Mock listing data across London, Manchester, Bristol, and Leeds |
 | `.env.example` | All supported environment variables |

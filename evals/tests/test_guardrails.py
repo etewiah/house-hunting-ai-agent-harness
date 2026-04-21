@@ -5,8 +5,8 @@ from src.harness.policies import (
     check_guardrails,
     check_output_guardrails,
 )
+from src.models.schemas import Listing
 from src.skills.offer_brief import generate_offer_brief
-from src.connectors.mock_listing_api import MockListingApi
 
 
 def test_boundary_notice_names_prohibited_advice_categories():
@@ -17,8 +17,18 @@ def test_boundary_notice_names_prohibited_advice_categories():
 
 
 def test_offer_brief_contains_boundary():
-    listing = MockListingApi("evals/datasets/listings_small.jsonl").get_listing("L001")
-    assert listing is not None
+    listing = Listing(
+        id="L001",
+        title="Quiet Garden Terrace",
+        price=675_000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Walthamstow, London",
+        commute_minutes=38,
+        features=["garden", "quiet street"],
+        description="",
+        source_url="https://example.com",
+    )
     brief = generate_offer_brief(listing)
     assert "Do not treat this as" in brief
     assert "legal" in brief.lower()

@@ -15,9 +15,7 @@ explicitly wants MCP tool calls from another client.
 ## Useful Commands
 
 ```bash
-uv run house-hunt demo
-uv run house-hunt demo --export-path /tmp/house-hunt-report.html
-uv run house-hunt demo --export-path /tmp/house-hunt-shortlist.csv
+uv run house-hunt
 uv run --extra dev pytest
 ```
 

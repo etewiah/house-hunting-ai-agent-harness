@@ -32,7 +32,7 @@ class TraceRecorder:
             }
         )
 
-    def flush(self, session_id: str = "demo") -> Path:
+    def flush(self, session_id: str = "session") -> Path:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         path = self.output_dir / f"{session_id}.json"
         path.write_text(json.dumps(self.events, indent=2), encoding="utf-8")

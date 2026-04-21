@@ -41,6 +41,8 @@ class HomesToCompareConnector:
 class H2CListingConnector:
     """Read-only listing search connector for HomesToCompare."""
 
+    name = "homestocompare"
+
     def __init__(self, base_url: str, read_key: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.read_key = read_key
