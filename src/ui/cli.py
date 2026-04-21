@@ -64,6 +64,13 @@ def _fmt_affordability(est: AffordabilityEstimate) -> str:
 def run_interactive() -> None:
     print(_WELCOME)
 
+    app = build_app()
+    if app.llm is not None:
+        print("Powered by Claude. Type your search below.\n")
+    else:
+        print("Demo mode (mock data, regex parsing).")
+        print("Set ANTHROPIC_API_KEY for AI-powered search.\n")
+
     while True:
         try:
             brief = input("Your brief: ").strip()
@@ -75,7 +82,6 @@ def run_interactive() -> None:
             print("Please enter a description of what you're looking for.\n")
             continue
 
-        app = build_app()
         profile = app.intake(brief)
 
         print("\nHere's what I understood:\n")

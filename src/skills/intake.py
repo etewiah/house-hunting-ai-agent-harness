@@ -79,12 +79,19 @@ def parse_buyer_brief(text: str, llm: LlmAdapter | None = None) -> BuyerProfile:
     return _parse_with_regex(text)
 
 
+def _extract_json(text: str) -> dict:
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"```(?:json)?\s*\n?", "", text).rstrip("`").strip()
+    return json.loads(text)
+
+
 def _parse_with_llm(text: str, llm: LlmAdapter) -> BuyerProfile:
     raw = llm.generate(
         _INTAKE_PROMPT.format(brief=text),
-        model=os.getenv("BUYER_AGENT_INTAKE_MODEL", "claude-haiku-4-5"),
+        model=os.getenv("BUYER_AGENT_INTAKE_MODEL", "claude-haiku-4-5-20251001"),
     )
-    parsed = json.loads(raw.strip())
+    parsed = _extract_json(raw)
     return BuyerProfile(
         location_query=parsed.get("location_query", "unknown"),
         max_budget=int(parsed.get("max_budget") or _extract_budget(text)),

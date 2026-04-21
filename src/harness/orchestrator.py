@@ -21,14 +21,16 @@ class HouseHuntOrchestrator:
         listings: MockListingApi,
         trace_dir: str = ".traces",
         h2c_connector: object | None = None,
+        llm: object | None = None,
     ) -> None:
         self.listings = listings
         self.h2c_connector = h2c_connector
+        self.llm = llm
         self.state = SessionState()
         self.tracer = TraceRecorder(trace_dir)
 
     def intake(self, brief: str) -> BuyerProfile:
-        profile = parse_buyer_brief(brief)
+        profile = parse_buyer_brief(brief, llm=self.llm)
         self.state.buyer_profile = profile
         self.tracer.record("intake.profile_created", profile)
         return profile
@@ -36,16 +38,26 @@ class HouseHuntOrchestrator:
     def triage(self, limit: int = 5) -> list[RankedListing]:
         if self.state.buyer_profile is None:
             raise ValueError("Cannot triage listings before preference intake.")
-        candidates = self.listings.search(self.state.buyer_profile)
-        located, warnings = filter_by_location(self.state.buyer_profile.location_query, candidates)
+        # Location filter runs on all listings so city resolution works regardless of price.
+        # Price/bedroom filter is applied after, scoped to the matched city.
+        all_listings = self.listings.all()
+        located, warnings = filter_by_location(self.state.buyer_profile.location_query, all_listings)
         self.state.triage_warnings = warnings
-        ranked = rank_listings(self.state.buyer_profile, located)[:limit]
+        candidates = [
+            l for l in located
+            if l.price <= self.state.buyer_profile.max_budget * 1.1
+            and l.bedrooms >= max(1, self.state.buyer_profile.min_bedrooms - 1)
+        ]
+        ranked = rank_listings(self.state.buyer_profile, candidates)[:limit]
         self.state.ranked_listings = ranked
         self.tracer.record("triage.ranked_listings", ranked)
         return ranked
 
     def explain_top_matches(self) -> list[str]:
-        explanations = [explain_ranked_listing(item) for item in self.state.ranked_listings]
+        explanations = [
+            explain_ranked_listing(item, profile=self.state.buyer_profile, llm=self.llm)
+            for item in self.state.ranked_listings
+        ]
         self.tracer.record("triage.explanations", explanations)
         return explanations
 

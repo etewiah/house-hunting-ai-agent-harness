@@ -74,28 +74,32 @@ Claude retrieves the listings; the harness ranks, compares, and prepares next st
 
 ---
 
-## For buyers: get started in 2 minutes
+## Getting started
 
-**Prerequisite:** install [uv](https://docs.astral.sh/uv/getting-started/installation/) (a fast Python package manager).
+**Prerequisite:** install [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
-# clone the repo
 git clone https://github.com/your-org/house-hunting-ai-agent-harness
 cd house-hunting-ai-agent-harness
-
-# run — no setup step needed
 uv run house-hunt
 ```
 
-Type your search in plain English when prompted. Include as much or as little as you like:
+**With an Anthropic API key** (`ANTHROPIC_API_KEY` set in your environment), the CLI uses Claude for intake and explanations — it understands natural language properly and gives conversational, specific explanations for each match.
+
+**Without a key**, it falls back to regex parsing and mock listings — useful for testing but not a real product experience.
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run house-hunt
+```
+
+Type your search in plain English:
 
 - `"3-bed in Bristol, budget £400k, need parking and good schools"`
 - `"2-bed flat, max 20 min commute to London Bridge, under £500k"`
 - `"somewhere quiet in Leeds with a garden, 4 beds, around £300k"`
 
-The agent parses your brief, ranks the listings, shows you why each one matched or missed, estimates your monthly mortgage, and gives you tour questions.
-
-> **Note:** listings in this demo are mock data. To search real listings, add a connector — see [Connecting real listings](#connecting-real-listings) below.
+> **Note:** the built-in listing dataset is mock data across London, Manchester, Bristol, and Leeds. For live listings, connect the H2C connector or run as an MCP server and let Claude retrieve them.
 
 ---
 
