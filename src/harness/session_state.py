@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from src.models.schemas import BuyerProfile, RankedListing
+from src.models.schemas import BuyerProfile, RankedListing, Session
 
 
 @dataclass
@@ -10,3 +10,4 @@ class SessionState:
     ranked_listings: list[RankedListing] = field(default_factory=list)
     triage_warnings: list[str] = field(default_factory=list)
     approvals: list[str] = field(default_factory=list)
+    session: Session | None = None

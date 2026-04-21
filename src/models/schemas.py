@@ -10,6 +10,68 @@ SourceLabel = Literal["listing_provided", "user_provided", "estimated", "inferre
 class SourcedValue:
     value: object
     source: SourceLabel
+    provider: str | None = None
+    retrieved_at: str | None = None
+    confidence: str | None = None
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CommuteEstimate:
+    listing_id: str
+    destination: str
+    duration_minutes: int | None
+    mode: str
+    provider: str
+    source: SourceLabel
+    retrieved_at: str
+    confidence: str | None = None
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AreaEvidence:
+    category: str
+    summary: str
+    source_name: str
+    source: SourceLabel
+    retrieved_at: str
+    jurisdiction: str | None = None
+    confidence: str | None = None
+    details: dict[str, object] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AreaData:
+    listing_id: str
+    evidence: list[AreaEvidence] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ImageFlag:
+    category: str
+    label: str
+    confidence: str
+    note: str
+    image_index: int | None = None
+    source: SourceLabel = "estimated"
+
+
+@dataclass(frozen=True)
+class ImageAnalysis:
+    listing_id: str
+    summary: str
+    flags: list[ImageFlag] = field(default_factory=list)
+    positive_highlights: list[str] = field(default_factory=list)
+    condition_warnings: list[str] = field(default_factory=list)
+    images_analysed: list[str] = field(default_factory=list)
+    images_skipped: int = 0
+    model_used: str | None = None
+    analysis_date: str | None = None
+    source: SourceLabel = "estimated"
+    error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +97,12 @@ class Listing:
     features: list[str]
     description: str
     source_url: str
+    location_data: dict[str, object] = field(default_factory=dict)
+    commute_estimates: list[CommuteEstimate] = field(default_factory=list)
+    area_data: AreaData | None = None
+    image_urls: list[str] = field(default_factory=list)
+    image_analysis: ImageAnalysis | None = None
+    external_refs: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -53,3 +121,68 @@ class AffordabilityEstimate:
     loan_amount: int
     monthly_payment: int
     assumptions: list[str]
+
+
+@dataclass
+class ListingNote:
+    listing_id: str
+    text: str
+    created_at: str
+    updated_at: str
+    source: str
+
+
+@dataclass
+class ShortlistEntry:
+    listing: Listing
+    added_at: str
+    status: str = "active"
+    notes: list[ListingNote] = field(default_factory=list)
+    ranked_score: float | None = None
+
+
+@dataclass
+class Session:
+    session_id: str
+    created_at: str
+    updated_at: str
+    buyer_profile: BuyerProfile | None = None
+    shortlist: list[ShortlistEntry] = field(default_factory=list)
+    search_history: list[dict[str, object]] = field(default_factory=list)
+    generated_outputs: dict[str, object] = field(default_factory=dict)
+    external_refs: dict[str, object] = field(default_factory=dict)
+    version: int = 1
+
+
+@dataclass
+class ExportOptions:
+    format: str
+    output_path: str | None = None
+    include_images: bool = True
+    include_affordability: bool = True
+    include_area_data: bool = True
+    include_image_analysis: bool = True
+    include_notes: bool = True
+    max_listings: int = 5
+
+
+@dataclass(frozen=True)
+class ExportPayload:
+    buyer_profile: BuyerProfile | None = None
+    ranked_listings: list[RankedListing] = field(default_factory=list)
+    shortlist: list[ShortlistEntry] = field(default_factory=list)
+    generated_outputs: dict[str, object] = field(default_factory=dict)
+    session_id: str | None = None
+    external_refs: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ExportResult:
+    format: str
+    listing_count: int
+    generated_at: str
+    output_path: str | None = None
+    share_url: str | None = None
+    machine_readable_url: str | None = None
+    file_size_bytes: int | None = None
+    warnings: list[str] = field(default_factory=list)
