@@ -147,7 +147,8 @@ def run_demo(export_path: str | None = None) -> None:
     next_steps = app.prep_next_steps()
     export_result = None
     if export_path is not None:
-        export_result = app.export(ExportOptions(format="csv", output_path=export_path))
+        export_format = "html" if export_path.endswith(".html") else "csv"
+        export_result = app.export(ExportOptions(format=export_format, output_path=export_path))
     trace_path = app.tracer.flush("demo")
 
     print("## Buyer Profile\n")
@@ -163,7 +164,7 @@ def run_demo(export_path: str | None = None) -> None:
     print(_fmt_affordability(next_steps["affordability"]))
     if export_result is not None:
         print("\n## Export\n")
-        print(f"CSV written to {export_result.output_path}")
+        print(f"{export_result.format.upper()} written to {export_result.output_path}")
     print(f"\nTrace written to {trace_path}")
 
 
@@ -185,7 +186,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--export-path",
-        help="Write demo results to a CSV file. Currently supported with the demo command.",
+        help="Write demo results to a CSV or HTML file. Currently supported with the demo command.",
     )
     args = parser.parse_args()
     if args.command == "demo":

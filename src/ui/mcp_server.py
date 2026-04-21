@@ -147,6 +147,28 @@ def export_csv(ranked_listings: list[dict], output_path: str | None = None) -> d
 
 
 @mcp.tool()
+def export_html(ranked_listings: list[dict], output_path: str | None = None) -> dict:
+    """Export ranked listings to a self-contained HTML report."""
+    ranked = []
+    for item in ranked_listings:
+        listing_data = item.get("listing", item)
+        ranked.append(
+            RankedListing(
+                listing=_to_listing(listing_data),
+                score=float(item.get("score", 0)),
+                matched=list(item.get("matched") or []),
+                missed=list(item.get("missed") or []),
+                warnings=list(item.get("warnings") or []),
+            )
+        )
+    result = ExportOrchestrator().export(
+        ExportPayload(ranked_listings=ranked),
+        ExportOptions(format="html", output_path=output_path),
+    )
+    return asdict(result)
+
+
+@mcp.tool()
 def search_demo_listings(brief: str) -> list[dict]:
     """Search the built-in demo dataset (mock listings across London, Manchester,
     Bristol, Leeds). Useful for testing the harness without a live data source.
