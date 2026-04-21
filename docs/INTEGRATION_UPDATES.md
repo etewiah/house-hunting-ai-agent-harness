@@ -4,11 +4,11 @@
 
 ---
 
-## 1. MCP Connector — wire up to HomesToCompare API
+## 1. HomesToCompare HTTP connector — wire up to HomesToCompare API
 
-**Current state:** `src/connectors/mcp_client.py` is a stub returning `"status": "not_configured"` for all calls.
+**Current state:** `src/connectors/mcp_client.py` is a real MCP stub and should remain reserved for MCP protocol work.
 
-**Required change:** Implement a real MCP connector that calls the HomesToCompare comparison creation API, enabling the harness to create comparisons from Python without browser automation.
+**Required change:** Implement a separate direct HTTP connector that calls the HomesToCompare comparison creation API, enabling the harness to create comparisons from Python without browser automation. Do not call this an MCP connector unless it implements the MCP protocol.
 
 ### `src/connectors/homestocompare_connector.py` *(new)*
 
@@ -93,23 +93,23 @@ from src.skills.listing_search import filter_listings
 class H2CListingConnector:
     """
     Fetches listings from the HomesToCompare REST API.
-    Requires an H2C_API_KEY (the mgmt password or a read-only key).
+    Requires an H2C_READ_KEY or equivalent dedicated read-only service key. Do not reuse the management password for this connector.
     """
 
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(self, base_url: str, read_key: str) -> None:
         self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
+        self.read_key = read_key
 
     def search(self, profile: BuyerProfile, limit: int = 200) -> list[Listing]:
         params = urllib.parse.urlencode({
             "location": profile.location_query,
-            "max_budget": profile.max_budget,
+            "max_budget": profile.max_budget,  # whole currency units
             "min_bedrooms": max(1, profile.min_bedrooms - 1),
             "limit": limit,
         })
         req = urllib.request.Request(
             f"{self.base_url}/api/listings/search?{params}",
-            headers={"x-api-key": self.api_key},
+            headers={"x-h2c-read-key": self.read_key},
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             rows = json.loads(resp.read())
@@ -135,7 +135,7 @@ def _row_to_listing(row: dict[str, object]) -> Listing:
     )
 ```
 
-**Note:** The `/api/listings/search` endpoint does not yet exist in the main app — it needs to be added (see the H2C implementation plan). This connector is built in parallel with that endpoint.
+**Note:** The `/api/listings/search` endpoint does not yet exist in the main app — it needs to be added (see the H2C implementation plan). The endpoint should return a minimal listing DTO or carefully redacted row shape, not an unrestricted admin dump. This connector is built in parallel with that endpoint.
 
 ---
 
@@ -200,6 +200,7 @@ def create_comparison(self, count: int = 2) -> dict[str, object]:
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Protocol
 from src.models.schemas import BuyerProfile
@@ -223,7 +224,7 @@ def parse_buyer_brief(text: str, llm: LlmAdapter | None = None) -> BuyerProfile:
 
 
 def _parse_with_llm(text: str, llm: LlmAdapter) -> BuyerProfile:
-    raw = llm.generate(_INTAKE_PROMPT.format(brief=text), model="claude-haiku-4-5-20251001")
+    raw = llm.generate(_INTAKE_PROMPT.format(brief=text), model=os.getenv("BUYER_AGENT_INTAKE_MODEL", "claude-haiku-4-5"))
     parsed = json.loads(raw.strip())
     return BuyerProfile(
         location_query=parsed.get("location_query", "unknown"),
@@ -275,11 +276,11 @@ def test_missing_commute_generates_warning():
 
 ---
 
-## 6. Policies — add `fair_housing` guardrail category
+## 6. Policies — add fair-housing-sensitive generated-language checks
 
 **Current state:** `PROHIBITED_CLAIMS` covers legal, mortgage, survey, inspection, fiduciary advice. Fair-housing-sensitive language is mentioned in `docs/guardrails.md` but not implemented in `policies.py`.
 
-**Required change:** Add fair housing terms to `PROHIBITED_CLAIMS`.
+**Required change:** Do not reject buyer intake just because a user says they care about schools or family needs. Instead, add a separate generated-language check used on assistant recommendations so the harness does not steer using demographic proxies.
 
 ### Changes to `src/harness/policies.py`
 
@@ -290,21 +291,24 @@ PROHIBITED_CLAIMS = [
     "survey advice",
     "inspection advice",
     "fiduciary advice",
-    # Fair-housing-sensitive claims
-    "good schools nearby",        # proxy for demographics
-    "safe neighbourhood",         # proxy for demographics
-    "family-friendly area",       # could be discriminatory in context
+]
+
+FAIR_HOUSING_SENSITIVE_RECOMMENDATION_PHRASES = [
+    "good schools nearby",
+    "safe neighbourhood",
+    "safe neighborhood",
+    "family-friendly area",
 ]
 ```
 
 **Add test to `evals/tests/test_guardrails.py`:**
 ```python
-def test_fair_housing_terms_detected():
-    violations = check_guardrails("This is a safe neighbourhood with good schools nearby.")
+def test_fair_housing_terms_detected_in_generated_recommendations():
+    violations = check_generated_recommendation_language("This is a safe neighbourhood with good schools nearby.")
     assert len(violations) > 0
 ```
 
-**Note:** These additions will affect the intake guardrail check. The `parseBuyerBrief` function in the HomesToCompare TypeScript implementation must mirror this updated list.
+**Note:** These additions should not affect buyer intake. The HomesToCompare TypeScript implementation should mirror the distinction between prohibited advice claims and fair-housing-sensitive generated recommendation language.
 
 ---
 
@@ -418,8 +422,8 @@ See `docs/improvements/AGENT_HARNESS_INTEGRATION_H2C.md` for full spec. Short fo
 
 ```
 GET /api/listings/search?location=xxx&max_budget=xxx&min_bedrooms=xxx&limit=200
-Auth: mgmt password or read key
-Response: DbListingRow[]
+Auth: dedicated read-only service key
+Response: minimal listing DTO[] or explicitly redacted DbListingRow subset
 ```
 
 The harness `H2CListingConnector._row_to_listing()` is written against this response shape. If the response shape changes, both must be updated together.
