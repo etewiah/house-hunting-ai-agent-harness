@@ -34,3 +34,8 @@ Manifest metadata fields available per fixture include:
 - `variant`
 - `sourceType`
 - `notes`
+
+Assertion fields supported in `expected` include:
+- exact checks like `parser`, `title`, `price`, `location`
+- flexible checks like `allowedParsers`, `titleIncludes`, `minPrice`, `locationIncludes`, `featuresAnyOf`
+- provenance checks via `fieldSources`

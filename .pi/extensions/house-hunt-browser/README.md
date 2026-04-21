@@ -37,6 +37,8 @@ Or run the built-in smoke test command:
 ```bash
 cd .pi/extensions/house-hunt-browser
 npm test
+npm run validate-fixtures
+npm run test:fixtures
 ```
 
 ## Capture a fixture

@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "npm run validate-fixtures && node --test test/*.test.mjs",
+    "test:fixtures": "node --test test/*.test.mjs",
+    "validate-fixtures": "node scripts/validate-fixtures.mjs",
     "capture-fixture": "node scripts/capture-fixture.mjs"
   },
   "pi": {

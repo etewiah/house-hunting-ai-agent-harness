@@ -167,4 +167,25 @@ export const fixtureManifest = [
       },
     },
   },
+  {
+    name: 'generic host supports flexible assertions for fallback extraction',
+    variant: 'generic-flex',
+    sourceType: 'synthetic',
+    notes: 'Demonstrates flexible assertion fields for future imperfect real-world fixtures.',
+    file: 'generic_jsonld_fallback.html',
+    url: 'https://example-homes.test/listings/leafy-court',
+    expected: {
+      allowedParsers: ['generic'],
+      titleIncludes: 'Leafy Court',
+      minPrice: 200000,
+      bedrooms: 2,
+      bathrooms: 1,
+      locationIncludes: 'Birmingham',
+      featuresAnyOf: [['parking', 'garage'], ['balcony', 'garden']],
+      fieldSources: {
+        title: 'json_ld_or_fallback',
+        location: 'json_ld_or_fallback'
+      },
+    },
+  },
 ];
