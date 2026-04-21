@@ -50,7 +50,7 @@ npm run capture-fixture -- --file saved-page.html --url https://www.zoopla.co.uk
 cat rendered.html | npm run capture-fixture -- --stdin --url https://www.onthemarket.com/details/7/
 ```
 
-This saves the HTML under `test/fixtures/` and prints a suggested test stub.
+This saves the HTML under `test/fixtures/` and prints a suggested manifest entry for `test/manifest.mjs`.
 
 ## Notes
 

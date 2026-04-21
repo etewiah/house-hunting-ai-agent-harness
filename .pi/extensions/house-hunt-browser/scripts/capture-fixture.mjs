@@ -18,6 +18,7 @@ if (!url) {
 
 const html = await loadHtml(args);
 const fixturesDir = path.resolve('test/fixtures');
+const manifestPath = path.resolve('test/manifest.mjs');
 await mkdir(fixturesDir, { recursive: true });
 
 const fixtureName = sanitizeFixtureName(args.fixtureName ?? inferFixtureName(url));
@@ -36,8 +37,9 @@ if (!args.force) {
 await writeFile(fixturePath, html, 'utf-8');
 
 console.log(`Saved fixture: ${fixturePath}`);
+console.log(`Manifest file: ${manifestPath}`);
 console.log('');
-console.log('Suggested test stub:');
+console.log('Suggested manifest entry:');
 console.log('');
 console.log(JSON.stringify({
   name: `${fixtureName} fixture`,
@@ -51,7 +53,13 @@ console.log(JSON.stringify({
     bathrooms: 0,
     location: 'TODO',
     features: [],
-    source: 'site_specific',
+    fieldSources: {
+      title: 'site_specific',
+      price: 'site_specific',
+      bedrooms: 'site_specific',
+      bathrooms: 'site_specific',
+      location: 'site_specific'
+    }
   },
 }, null, 2));
 
