@@ -23,3 +23,8 @@ When you add a new fixture:
 1. save the HTML into `test/fixtures/`
 2. add a manifest entry in `manifest.mjs`
 3. run `npm test`
+
+Current coverage includes variants for:
+- Rightmove standard and minimal pages
+- Zoopla standard and missing-bath pages
+- OnTheMarket structured-data and text-fallback pages

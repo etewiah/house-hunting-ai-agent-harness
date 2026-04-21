@@ -62,7 +62,7 @@ export function extractListingFromHtml(url, html, commuteMinutes = null) {
   );
   const features = Array.from(new Set([
     ...(siteSpecific.features ?? []),
-    ...FEATURE_KEYWORDS.filter((keyword) => new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(pageText)),
+    ...normalizeFeatures([pageText]),
   ])).filter(Boolean);
 
   const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific);
@@ -110,7 +110,9 @@ function extractMeta(html, attrSelector, targetAttr) {
 }
 
 function extractTitleTag(html) {
-  return stripTags((/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? "")).trim() || undefined;
+  const raw = stripTags((/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? "")).trim();
+  if (!raw) return undefined;
+  return raw.split('|')[0].trim() || raw;
 }
 
 function extractCanonicalUrl(html) {
@@ -188,6 +190,8 @@ function inferLocationFromTitle(title) {
 }
 
 function inferLocationFromText(text) {
+  const contextual = text.match(/(?:located in|situated in|in)\s+([A-Z][a-z]+(?:,?\s+[A-Z][a-z]+){0,2})/i);
+  if (contextual?.[1]) return contextual[1].trim();
   const match = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   return match?.[1];
 }
