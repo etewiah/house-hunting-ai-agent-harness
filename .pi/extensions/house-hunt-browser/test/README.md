@@ -28,3 +28,9 @@ Current coverage includes variants for:
 - Rightmove standard and minimal pages
 - Zoopla standard and missing-bath pages
 - OnTheMarket structured-data and text-fallback pages
+- Generic non-portal fallback pages using JSON-LD and text/meta signals
+
+Manifest metadata fields available per fixture include:
+- `variant`
+- `sourceType`
+- `notes`

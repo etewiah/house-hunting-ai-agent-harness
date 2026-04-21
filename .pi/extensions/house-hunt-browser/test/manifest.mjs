@@ -1,6 +1,9 @@
 export const fixtureManifest = [
   {
     name: 'rightmove fixture uses PAGE_MODEL parser',
+    variant: 'standard',
+    sourceType: 'synthetic',
+    notes: 'Baseline Rightmove PAGE_MODEL extraction.',
     file: 'rightmove.html',
     url: 'https://www.rightmove.co.uk/properties/123456789',
     expected: {
@@ -22,6 +25,9 @@ export const fixtureManifest = [
   },
   {
     name: 'zoopla fixture uses __NEXT_DATA__ parser',
+    variant: 'standard',
+    sourceType: 'synthetic',
+    notes: 'Baseline Zoopla Next.js extraction.',
     file: 'zoopla.html',
     url: 'https://www.zoopla.co.uk/for-sale/details/42/',
     expected: {
@@ -43,6 +49,9 @@ export const fixtureManifest = [
   },
   {
     name: 'onthemarket fixture uses __NEXT_DATA__ parser with json-ld present',
+    variant: 'standard',
+    sourceType: 'synthetic',
+    notes: 'Structured portal data plus JSON-LD present.',
     file: 'onthemarket.html',
     url: 'https://www.onthemarket.com/details/7/',
     expected: {
@@ -65,6 +74,9 @@ export const fixtureManifest = [
   },
   {
     name: 'rightmove minimal fixture tolerates missing bathrooms',
+    variant: 'minimal',
+    sourceType: 'synthetic',
+    notes: 'Tests missing bathroom handling.',
     file: 'rightmove_minimal.html',
     url: 'https://www.rightmove.co.uk/properties/555555555',
     expected: {
@@ -85,6 +97,9 @@ export const fixtureManifest = [
   },
   {
     name: 'zoopla fixture falls back cleanly when baths are absent',
+    variant: 'missing-baths',
+    sourceType: 'synthetic',
+    notes: 'Tests missing bath count and walkable feature synonym.',
     file: 'zoopla_no_baths.html',
     url: 'https://www.zoopla.co.uk/for-sale/details/77/',
     expected: {
@@ -105,6 +120,9 @@ export const fixtureManifest = [
   },
   {
     name: 'onthemarket text fallback still extracts core fields',
+    variant: 'text-fallback',
+    sourceType: 'synthetic',
+    notes: 'Tests mostly text/meta fallback with portal-specific title aid.',
     file: 'onthemarket_text_fallback.html',
     url: 'https://www.onthemarket.com/details/88/',
     expected: {
@@ -121,6 +139,31 @@ export const fixtureManifest = [
         bedrooms: 'site_specific',
         bathrooms: 'site_specific',
         location: 'text_or_meta',
+      },
+    },
+  },
+  {
+    name: 'generic host falls back to json-ld and text signals',
+    variant: 'generic-jsonld',
+    sourceType: 'synthetic',
+    notes: 'Exercises the generic parser path on a non-portal host.',
+    file: 'generic_jsonld_fallback.html',
+    url: 'https://example-homes.test/listings/leafy-court',
+    expected: {
+      parser: 'generic',
+      title: 'Leafy Court Apartment',
+      price: 215000,
+      bedrooms: 2,
+      bathrooms: 1,
+      location: 'Moseley, Birmingham',
+      features: ['parking', 'balcony', 'lift'],
+      hadJsonLd: true,
+      fieldSources: {
+        title: 'json_ld_or_fallback',
+        price: 'json_ld_or_fallback',
+        bedrooms: 'json_ld_or_fallback',
+        bathrooms: 'json_ld_or_fallback',
+        location: 'json_ld_or_fallback'
       },
     },
   },
