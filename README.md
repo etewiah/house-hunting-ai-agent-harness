@@ -18,11 +18,8 @@ This is not a magical autonomous house buyer. It is a forkable framework for bui
 ## Quick Start
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-house-hunt demo
-pytest
+uv run house-hunt demo
+uv run --extra dev pytest
 ```
 
 ## Design
