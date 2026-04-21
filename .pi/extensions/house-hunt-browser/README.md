@@ -5,8 +5,8 @@ Project-local Pi extension that adds browser/search-oriented tools for the `brow
 ## Tools
 
 - `property_web_search` — search the web for property listing pages
-- `property_listing_extract` — fetch and normalize a listing page into the harness listing shape
-- `extract_property_listings` — normalize multiple listing URLs in one call
+- `property_listing_extract` — fetch and normalize a listing page into the harness listing shape, with extraction diagnostics
+- `extract_property_listings` — normalize multiple listing URLs in one call, with extraction diagnostics
 - `run_house_hunt_harness` — run the Python harness on normalized listings
 - `house_hunt_from_web` — end-to-end search + extract + rank in one tool
 
@@ -30,5 +30,6 @@ Then use the project skill:
 
 - Search currently uses DuckDuckGo HTML results and then filters to known property hosts.
 - Extraction now includes site-specific parsers for Rightmove, Zoopla, and OnTheMarket, with generic fallback parsing.
+- Extraction tool details include diagnostics such as parser used, host, whether JSON-LD was present, and field source hints.
 - Extraction is still heuristic and should be treated as a best-effort normalizer.
 - Keep `source_url` for every listing and do not invent missing values.

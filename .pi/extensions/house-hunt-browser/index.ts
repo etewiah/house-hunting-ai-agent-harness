@@ -75,6 +75,18 @@ type PartialListing = Partial<Omit<ListingDict, "commute_minutes">> & {
   commute_minutes?: number | null;
 };
 
+type ListingExtractionDiagnostics = {
+  parser: string;
+  sourceHints: string[];
+  host?: string;
+  hadJsonLd: boolean;
+};
+
+type ListingExtractionResult = {
+  listing: ListingDict;
+  diagnostics: ListingExtractionDiagnostics;
+};
+
 export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "property_web_search",
@@ -109,10 +121,10 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     ],
     parameters: extractParams,
     async execute(_toolCallId, params, signal) {
-      const listing = await extractListing(params.url, params.commuteMinutes ?? null, signal);
+      const extraction = await extractListing(params.url, params.commuteMinutes ?? null, signal);
       return {
-        content: [{ type: "text", text: JSON.stringify(listing, null, 2) }],
-        details: { listing },
+        content: [{ type: "text", text: JSON.stringify(extraction.listing, null, 2) }],
+        details: extraction,
       };
     },
   });
@@ -129,18 +141,20 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     parameters: batchExtractParams,
     async execute(_toolCallId, params, signal) {
       const listings: ListingDict[] = [];
+      const extracted: ListingExtractionResult[] = [];
       const failed: Array<{ url: string; error: string }> = [];
       for (const url of params.urls) {
         try {
-          const listing = await extractListing(url, params.commuteMinutesByUrl?.[url] ?? null, signal);
-          listings.push(listing);
+          const extraction = await extractListing(url, params.commuteMinutesByUrl?.[url] ?? null, signal);
+          listings.push(extraction.listing);
+          extracted.push(extraction);
         } catch (error) {
           failed.push({ url, error: error instanceof Error ? error.message : String(error) });
         }
       }
       return {
         content: [{ type: "text", text: JSON.stringify({ extracted: listings.length, failed: failed.length, listings, failed }, null, 2) }],
-        details: { listings, failed },
+        details: { listings, extracted, failed },
         isError: listings.length === 0,
       };
     },
@@ -186,10 +200,13 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     async execute(_toolCallId, params, signal) {
       const results = await searchListings(params.brief, params.maxResults ?? 6, params.sites ?? [...DEFAULT_SITES], signal);
       const listings: ListingDict[] = [];
+      const extracted: ListingExtractionResult[] = [];
       const failed: Array<{ url: string; error: string }> = [];
       for (const result of results) {
         try {
-          listings.push(await extractListing(result.url, null, signal));
+          const extraction = await extractListing(result.url, null, signal);
+          listings.push(extraction.listing);
+          extracted.push(extraction);
         } catch (error) {
           failed.push({ url: result.url, error: error instanceof Error ? error.message : String(error) });
         }
@@ -197,7 +214,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
       if (listings.length === 0) {
         return {
           content: [{ type: "text", text: `Search found ${results.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}` }],
-          details: { searchResults: results, listings, failed },
+          details: { searchResults: results, listings, extracted, failed },
           isError: true,
         };
       }
@@ -208,6 +225,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         details: {
           searchResults: results,
           listings,
+          extracted,
           failed,
           ...harness.details,
         },
@@ -246,7 +264,7 @@ async function searchListings(query: string, maxResults: number, sites: string[]
   return results.slice(0, maxResults);
 }
 
-async function extractListing(url: string, commuteMinutes: number | null, signal?: AbortSignal): Promise<ListingDict> {
+async function extractListing(url: string, commuteMinutes: number | null, signal?: AbortSignal): Promise<ListingExtractionResult> {
   const response = await fetch(url, {
     headers: {
       "user-agent": "Mozilla/5.0 (compatible; house-hunt-browser-extension/0.1)",
@@ -314,17 +332,22 @@ async function extractListing(url: string, commuteMinutes: number | null, signal
     ...FEATURE_KEYWORDS.filter((keyword) => new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(pageText)),
   ])).filter(Boolean);
 
+  const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific);
+
   return {
-    id: siteSpecific.id || createListingId(canonicalUrl),
-    title,
-    price,
-    bedrooms,
-    bathrooms,
-    location,
-    commute_minutes: commuteMinutes,
-    features,
-    description,
-    source_url: canonicalUrl,
+    listing: {
+      id: siteSpecific.id || createListingId(canonicalUrl),
+      title,
+      price,
+      bedrooms,
+      bathrooms,
+      location,
+      commute_minutes: commuteMinutes,
+      features,
+      description,
+      source_url: canonicalUrl,
+    },
+    diagnostics,
   };
 }
 
@@ -465,19 +488,19 @@ function createListingId(rawUrl: string): string {
   }
 }
 
-function extractSiteSpecificListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
+function extractSiteSpecificListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing & { _parser?: string } {
   const host = safeHostname(url);
-  if (!host) return {};
+  if (!host) return { _parser: "generic" };
   if (host.endsWith("rightmove.co.uk")) {
-    return extractRightmoveListing(url, html, pageText, jsonLdObjects);
+    return { _parser: "rightmove", ...extractRightmoveListing(url, html, pageText, jsonLdObjects) };
   }
   if (host.endsWith("zoopla.co.uk")) {
-    return extractZooplaListing(url, html, pageText, jsonLdObjects);
+    return { _parser: "zoopla", ...extractZooplaListing(url, html, pageText, jsonLdObjects) };
   }
   if (host.endsWith("onthemarket.com")) {
-    return extractOnTheMarketListing(url, html, pageText, jsonLdObjects);
+    return { _parser: "onthemarket", ...extractOnTheMarketListing(url, html, pageText, jsonLdObjects) };
   }
-  return {};
+  return { _parser: "generic" };
 }
 
 function extractRightmoveListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
@@ -684,6 +707,32 @@ function coerceInt(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
   if (typeof value === "string") return extractCurrencyInt(value) ?? regexInt(value, /(\d+)/);
   return undefined;
+}
+
+function buildExtractionDiagnostics(
+  url: string,
+  jsonLdObjects: any[],
+  siteSpecific: PartialListing & { _parser?: string },
+): ListingExtractionDiagnostics {
+  const sourceHints: string[] = [];
+  if (siteSpecific._parser && siteSpecific._parser !== "generic") {
+    sourceHints.push(`site:${siteSpecific._parser}`);
+  }
+  for (const field of ["title", "description", "price", "bedrooms", "bathrooms", "location", "source_url"] as const) {
+    if (siteSpecific[field] !== undefined && siteSpecific[field] !== "") {
+      sourceHints.push(`${field}:site_specific`);
+    } else if (jsonLdObjects.length > 0) {
+      sourceHints.push(`${field}:fallback_possible`);
+    } else {
+      sourceHints.push(`${field}:text_or_meta`);
+    }
+  }
+  return {
+    parser: siteSpecific._parser || "generic",
+    sourceHints,
+    host: safeHostname(url),
+    hadJsonLd: jsonLdObjects.length > 0,
+  };
 }
 
 function safeHostname(rawUrl: string): string | undefined {
