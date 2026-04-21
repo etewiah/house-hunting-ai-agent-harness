@@ -29,5 +29,6 @@ Then use the project skill:
 ## Notes
 
 - Search currently uses DuckDuckGo HTML results and then filters to known property hosts.
-- Extraction is heuristic and should be treated as a best-effort normalizer.
+- Extraction now includes site-specific parsers for Rightmove, Zoopla, and OnTheMarket, with generic fallback parsing.
+- Extraction is still heuristic and should be treated as a best-effort normalizer.
 - Keep `source_url` for every listing and do not invent missing values.

@@ -71,6 +71,10 @@ type ListingDict = {
   source_url: string;
 };
 
+type PartialListing = Partial<Omit<ListingDict, "commute_minutes">> & {
+  commute_minutes?: number | null;
+};
+
 export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "property_web_search",
@@ -257,50 +261,61 @@ async function extractListing(url: string, commuteMinutes: number | null, signal
   const jsonLdObjects = extractJsonLd(html);
   const mergedJsonLd = pickBestJsonLd(jsonLdObjects);
   const pageText = stripTags(removeScriptsAndStyles(html));
+  const siteSpecific = extractSiteSpecificListing(url, html, pageText, jsonLdObjects);
 
   const title = firstNonEmpty(
+    siteSpecific.title,
     stringAtPath(mergedJsonLd, ["name"]),
     extractMeta(html, "property=\"og:title\"", "content"),
     extractTitleTag(html),
     "Untitled listing",
   );
   const description = firstNonEmpty(
+    siteSpecific.description,
     stringAtPath(mergedJsonLd, ["description"]),
     extractMeta(html, "name=\"description\"", "content"),
     pageText.slice(0, 280).trim(),
     "",
   );
   const price = firstInt(
+    siteSpecific.price,
     numberAtPath(mergedJsonLd, ["offers", "price"]),
     numberAtPath(mergedJsonLd, ["offers", 0, "price"]),
     extractCurrencyInt(pageText),
     0,
   );
   const bedrooms = firstInt(
+    siteSpecific.bedrooms,
     numberAtPath(mergedJsonLd, ["numberOfRooms"]),
     regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i),
     0,
   );
   const bathrooms = firstInt(
+    siteSpecific.bathrooms,
     regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i),
     0,
   );
+  const canonicalUrl = firstNonEmpty(
+    siteSpecific.source_url,
+    stringAtPath(mergedJsonLd, ["url"]),
+    extractCanonicalUrl(html),
+    url,
+  );
   const location = firstNonEmpty(
+    siteSpecific.location,
     stringAtPath(mergedJsonLd, ["address", "addressLocality"]),
     stringAtPath(mergedJsonLd, ["address", "streetAddress"]),
     inferLocationFromTitle(title),
     inferLocationFromText(pageText),
     "unknown",
   );
-  const canonicalUrl = firstNonEmpty(
-    stringAtPath(mergedJsonLd, ["url"]),
-    extractCanonicalUrl(html),
-    url,
-  );
-  const features = FEATURE_KEYWORDS.filter((keyword) => new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(pageText));
+  const features = Array.from(new Set([
+    ...(siteSpecific.features ?? []),
+    ...FEATURE_KEYWORDS.filter((keyword) => new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(pageText)),
+  ])).filter(Boolean);
 
   return {
-    id: createListingId(canonicalUrl),
+    id: siteSpecific.id || createListingId(canonicalUrl),
     title,
     price,
     bedrooms,
@@ -447,6 +462,235 @@ function createListingId(rawUrl: string): string {
     return slug || `listing-${Date.now()}`;
   } catch {
     return `listing-${Date.now()}`;
+  }
+}
+
+function extractSiteSpecificListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
+  const host = safeHostname(url);
+  if (!host) return {};
+  if (host.endsWith("rightmove.co.uk")) {
+    return extractRightmoveListing(url, html, pageText, jsonLdObjects);
+  }
+  if (host.endsWith("zoopla.co.uk")) {
+    return extractZooplaListing(url, html, pageText, jsonLdObjects);
+  }
+  if (host.endsWith("onthemarket.com")) {
+    return extractOnTheMarketListing(url, html, pageText, jsonLdObjects);
+  }
+  return {};
+}
+
+function extractRightmoveListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
+  const nextData = extractNextData(html);
+  const pageModel = extractAssignedJson(html, /window\.PAGE_MODEL\s*=\s*/);
+  const propertyData =
+    findObject(nextData, (value) => typeof value?.id !== "undefined" && (value?.bedrooms || value?.bathrooms || value?.propertySubType))
+    ?? findObject(pageModel, (value) => typeof value?.id !== "undefined" && (value?.bedrooms || value?.bathrooms || value?.propertySubType))
+    ?? {};
+  const features = normalizeFeatures([
+    ...collectStrings(propertyData?.keyFeatures),
+    ...collectStrings(findValue(nextData, (value) => Array.isArray(value) && value.some((item: unknown) => typeof item === "string" && /parking|garden|garage|balcony|lift/i.test(item))) ?? []),
+  ]);
+  return {
+    id: firstNonEmpty(
+      propertyData?.id != null ? `rightmove-${propertyData.id}` : undefined,
+      createListingId(url),
+    ),
+    title: firstNonEmpty(
+      propertyData?.headline,
+      propertyData?.displayAddress,
+      stringAtPath(pickBestJsonLd(jsonLdObjects), ["name"]),
+    ),
+    price: firstInt(
+      coerceInt(propertyData?.prices?.primaryPrice),
+      coerceInt(propertyData?.price),
+      extractCurrencyInt(pageText),
+    ),
+    bedrooms: firstInt(coerceInt(propertyData?.bedrooms), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
+    bathrooms: firstInt(coerceInt(propertyData?.bathrooms), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
+    location: firstNonEmpty(propertyData?.displayAddress, propertyData?.address, inferLocationFromTitle(extractTitleTag(html) ?? "")),
+    description: firstNonEmpty(propertyData?.summary, propertyData?.description, extractMeta(html, "name=\"description\"", "content")),
+    features,
+    source_url: firstNonEmpty(propertyData?.url, extractCanonicalUrl(html), url),
+  };
+}
+
+function extractZooplaListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
+  const nextData = extractNextData(html);
+  const listing =
+    findObject(nextData, (value) => (value?.listingId || value?.id) && (value?.price || value?.bedrooms || value?.branch))
+    ?? findObject(nextData, (value) => (value?.price || value?.beds) && (value?.title || value?.address))
+    ?? {};
+  const features = normalizeFeatures([
+    ...collectStrings(listing?.features),
+    ...collectStrings(listing?.key_features),
+    ...collectStrings(listing?.tags),
+  ]);
+  return {
+    id: firstNonEmpty(
+      listing?.listingId != null ? `zoopla-${listing.listingId}` : undefined,
+      listing?.id != null ? `zoopla-${listing.id}` : undefined,
+      createListingId(url),
+    ),
+    title: firstNonEmpty(listing?.title, listing?.propertyType, extractTitleTag(html)),
+    price: firstInt(coerceInt(listing?.price), coerceInt(listing?.pricing?.value), extractCurrencyInt(pageText)),
+    bedrooms: firstInt(coerceInt(listing?.beds), coerceInt(listing?.bedrooms), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
+    bathrooms: firstInt(coerceInt(listing?.baths), coerceInt(listing?.bathrooms), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
+    location: firstNonEmpty(
+      listing?.address,
+      listing?.location,
+      listing?.branch?.displayAddress,
+      stringAtPath(pickBestJsonLd(jsonLdObjects), ["address", "addressLocality"]),
+    ),
+    description: firstNonEmpty(listing?.description, extractMeta(html, "name=\"description\"", "content")),
+    features,
+    source_url: firstNonEmpty(listing?.canonicalUrl, extractCanonicalUrl(html), url),
+  };
+}
+
+function extractOnTheMarketListing(url: string, html: string, pageText: string, jsonLdObjects: any[]): PartialListing {
+  const nextData = extractNextData(html);
+  const listing =
+    findObject(nextData, (value) => (value?.id || value?.propertyId) && (value?.price || value?.bedrooms || value?.bathrooms))
+    ?? findObject(nextData, (value) => (value?.price || value?.priceValue) && (value?.title || value?.displayAddress || value?.location))
+    ?? {};
+  const features = normalizeFeatures([
+    ...collectStrings(listing?.keyFeatures),
+    ...collectStrings(listing?.features),
+    ...collectStrings(listing?.bulletPoints),
+  ]);
+  return {
+    id: firstNonEmpty(
+      listing?.id != null ? `onthemarket-${listing.id}` : undefined,
+      listing?.propertyId != null ? `onthemarket-${listing.propertyId}` : undefined,
+      createListingId(url),
+    ),
+    title: firstNonEmpty(listing?.title, listing?.heading, extractTitleTag(html)),
+    price: firstInt(coerceInt(listing?.price), coerceInt(listing?.priceValue), extractCurrencyInt(pageText)),
+    bedrooms: firstInt(coerceInt(listing?.bedrooms), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
+    bathrooms: firstInt(coerceInt(listing?.bathrooms), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
+    location: firstNonEmpty(listing?.displayAddress, listing?.location, listing?.address, inferLocationFromTitle(extractTitleTag(html) ?? "")),
+    description: firstNonEmpty(listing?.description, listing?.summary, extractMeta(html, "name=\"description\"", "content")),
+    features,
+    source_url: firstNonEmpty(listing?.canonicalUrl, extractCanonicalUrl(html), url),
+  };
+}
+
+function extractNextData(html: string): any {
+  return extractScriptJson(html, /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i) ?? {};
+}
+
+function extractScriptJson(html: string, regex: RegExp): any {
+  const match = regex.exec(html);
+  if (!match) return undefined;
+  try {
+    return JSON.parse(decodeHtml(match[1]));
+  } catch {
+    return undefined;
+  }
+}
+
+function extractAssignedJson(html: string, prefixRegex: RegExp): any {
+  const start = prefixRegex.exec(html);
+  if (!start || start.index === undefined) return undefined;
+  const from = start.index + start[0].length;
+  const end = findBalancedJsonEnd(html, from);
+  if (end === -1) return undefined;
+  const raw = html.slice(from, end + 1);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function findBalancedJsonEnd(text: string, start: number): number {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i += 1) {
+    const char = text[i];
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (char === "\\") {
+        escape = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === "{" || char === "[") depth += 1;
+    if (char === "}" || char === "]") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function findObject(root: any, predicate: (value: any) => boolean): any {
+  return findValue(root, (value) => !!value && typeof value === "object" && predicate(value));
+}
+
+function findValue(root: any, predicate: (value: any) => boolean): any {
+  const seen = new Set<any>();
+  const stack = [root];
+  while (stack.length > 0) {
+    const value = stack.pop();
+    if (value == null || typeof value !== "object") continue;
+    if (seen.has(value)) continue;
+    seen.add(value);
+    if (predicate(value)) return value;
+    if (Array.isArray(value)) {
+      for (const item of value) stack.push(item);
+    } else {
+      for (const item of Object.values(value)) stack.push(item);
+    }
+  }
+  return undefined;
+}
+
+function collectStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string") return [item];
+    if (item && typeof item === "object") {
+      return Object.values(item).filter((v): v is string => typeof v === "string");
+    }
+    return [];
+  });
+}
+
+function normalizeFeatures(values: string[]): string[] {
+  const lowered = values.map((value) => value.trim()).filter(Boolean).join(" | ").toLowerCase();
+  const synonyms: Record<(typeof FEATURE_KEYWORDS)[number], string[]> = {
+    parking: ["parking", "off-street", "off street", "driveway", "allocated space"],
+    garden: ["garden", "patio", "terrace", "outdoor space"],
+    garage: ["garage"],
+    walkable: ["walkable", "walking distance"],
+    "quiet street": ["quiet street", "quiet road", "cul-de-sac"],
+    balcony: ["balcony"],
+    lift: ["lift", "elevator"],
+  };
+  return FEATURE_KEYWORDS.filter((keyword) => synonyms[keyword].some((term) => new RegExp(`\\b${escapeRegExp(term)}\\b`, "i").test(lowered)));
+}
+
+function coerceInt(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  if (typeof value === "string") return extractCurrencyInt(value) ?? regexInt(value, /(\d+)/);
+  return undefined;
+}
+
+function safeHostname(rawUrl: string): string | undefined {
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return undefined;
   }
 }
 
