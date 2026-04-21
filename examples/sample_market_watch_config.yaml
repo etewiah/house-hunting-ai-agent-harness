@@ -1,0 +1,9 @@
+location_query: "King's Cross commute"
+max_budget: 700000
+min_bedrooms: 3
+frequency: daily
+notify_channels:
+  - email
+  - slack
+approval_required_before_contacting_agents: true
+
