@@ -181,7 +181,7 @@ def main() -> None:
         help=(
             "'search' (default) starts an interactive session; "
             "'demo' runs a fixed example; "
-            "'serve' starts the MCP server for use with Claude Code"
+            "'serve' starts the optional MCP server"
         ),
     )
     parser.add_argument(

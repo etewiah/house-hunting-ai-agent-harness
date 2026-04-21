@@ -103,7 +103,11 @@ class LlmAdapter(Protocol):
 See `src/connectors/anthropic_adapter.py` and `src/connectors/openai_adapter.py`
 as reference implementations. Then register it in `src/connectors/provider_factory.py`.
 
-## MCP server
+## Optional MCP Server
 
-The MCP server (`uv run house-hunt serve`) uses the same provider detection.
-Set the same environment variables before starting the server.
+The MCP server (`uv run house-hunt serve`) is optional. It uses the same provider
+detection as the CLI. Set the same environment variables before starting the server if
+your MCP client needs model-backed tools.
+
+Coding agents can usually use the repository directly without MCP by importing modules,
+running the CLI, or calling the eval suite.

@@ -1,8 +1,8 @@
 """
-MCP server exposing house-hunting harness tools to Claude Code (or any MCP client).
+Optional MCP server exposing house-hunting harness tools to compatible clients.
 
-Claude provides the listings data (from browsing, H2C API, or any source).
-The harness provides structure: scoring, comparison, affordability, guardrails, tracing.
+The client provides listing data from browsing, platform APIs, or any source. The harness
+provides structure: scoring, comparison, affordability, guardrails, tracing.
 
 Start with:
   uv run house-hunt serve

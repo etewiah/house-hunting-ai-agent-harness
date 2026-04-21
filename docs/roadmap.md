@@ -15,7 +15,7 @@
 
 - Web demo
 - Better trace viewer
-- MCP connector example
+- Optional MCP connector example
 - Market watch scheduler
 - More policy evals
 
@@ -25,4 +25,3 @@
 - Calendar integrations
 - Notification adapters
 - Human handoff workflows
-

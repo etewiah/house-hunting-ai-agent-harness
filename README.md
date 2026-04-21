@@ -36,41 +36,33 @@ Questions to ask on the tour:
 
 ---
 
-## Using with Claude Code (recommended)
+## Using With Coding Agents
 
-The harness is designed to work alongside an AI like Claude Code. Claude handles data retrieval — browsing property sites, calling the HomesToCompare API — and the harness handles structure: scoring, comparison, affordability, guardrails, and tracing.
+The harness is designed so coding agents such as Codex or Claude Code can use it
+directly from the repository. An agent can read the docs, inspect the Python modules, run
+the CLI, call functions from `src/skills/`, and run the eval suite without any server
+setup.
 
-**1. Add the server to your Claude Code config** (`~/.claude/claude_desktop_config.json` or `.claude/settings.json`):
+For agent-facing instructions, see [AGENTS.md](AGENTS.md).
 
-```json
-{
-  "mcpServers": {
-    "house-hunt": {
-      "command": "uv",
-      "args": ["run", "house-hunt", "serve"],
-      "cwd": "/path/to/house-hunting-ai-agent-harness"
-    }
-  }
-}
-```
+Useful direct entry points:
 
-**2. Start a conversation with Claude Code.** The harness exposes these tools:
-
-| Tool | What it does |
+| Entry point | What it does |
 |---|---|
-| `parse_brief` | Parses a natural language buyer brief into a structured profile |
-| `rank_listings` | Scores and ranks listings Claude retrieved against the brief |
-| `compare_homes` | Side-by-side comparison of up to 5 listings |
-| `estimate_affordability` | Monthly mortgage estimate for any price |
-| `tour_questions` | Property-specific questions to ask on a viewing |
-| `offer_brief` | Offer preparation summary |
-| `search_demo_listings` | Search the built-in mock dataset (no API key needed) |
+| `uv run house-hunt demo` | Runs the built-in demo dataset |
+| `uv run house-hunt demo --export-path report.html` | Writes a self-contained HTML report |
+| `uv run house-hunt demo --export-path shortlist.csv` | Writes a CSV shortlist |
+| `uv run --extra dev pytest` | Runs the eval suite |
+| `src/skills/*` | Repo-native skills for intake, ranking, comparison, exports, and next steps |
+| `src/models/capabilities.py` | Provider-facing protocols for optional adapters |
 
-**3. Example prompt to Claude:**
+Example prompt to a coding agent:
 
-> Search Rightmove for 3-bed houses in Bristol under £450k, then use the house-hunt harness to rank them against my brief: need a garden, max 25 min commute to Temple Meads, quiet street preferred.
+> Use this repo directly. Search or ingest candidate listings, normalize them into
+> `Listing` objects, rank them against my brief, then export the result to HTML.
 
-Claude retrieves the listings; the harness ranks, compares, and prepares next steps.
+The agent retrieves or receives listings; the harness ranks, compares, exports, and
+prepares next steps.
 
 ---
 
@@ -99,7 +91,9 @@ Type your search in plain English:
 - `"2-bed flat, max 20 min commute to London Bridge, under £500k"`
 - `"somewhere quiet in Leeds with a garden, 4 beds, around £300k"`
 
-> **Note:** the built-in listing dataset is mock data across London, Manchester, Bristol, and Leeds. For live listings, connect the H2C connector or run as an MCP server and let Claude retrieve them.
+> **Note:** the built-in listing dataset is mock data across London, Manchester, Bristol,
+> and Leeds. For live listings, connect a listing connector, import CSV data, or have an
+> agent normalize retrieved listings into `Listing` objects.
 
 ---
 
@@ -134,7 +128,7 @@ uv run --extra dev pytest
 src/
   skills/       intake, ranking, explanation, comparison, affordability, tour prep, offer brief
   harness/      orchestration, session state, policies, tracing, approvals
-  connectors/   mock API, local CSV, MCP stub, HomesToCompare connector
+  connectors/   mock API, local CSV, optional MCP stub, HomesToCompare connector
   ui/           CLI, web demo stub
 evals/
   tests/        eval suite
@@ -144,6 +138,31 @@ evals/
 ### Connecting real listings
 
 Implement the `search(profile: BuyerProfile) -> list[Listing]` interface in `src/connectors/` and pass it to `HouseHuntOrchestrator`. The mock connector in `src/connectors/mock_listing_api.py` is the reference implementation.
+
+### Optional MCP server
+
+The MCP server is optional. It is useful for clients that need MCP tool discovery and
+tool calls, but coding agents can usually use the repo directly.
+
+To start it manually:
+
+```bash
+uv run house-hunt serve
+```
+
+If your client requires static MCP config, add something like this to its configuration:
+
+```json
+{
+  "mcpServers": {
+    "house-hunt": {
+      "command": "uv",
+      "args": ["run", "house-hunt", "serve"],
+      "cwd": "/path/to/house-hunting-ai-agent-harness"
+    }
+  }
+}
+```
 
 ### Swapping in an LLM for intake
 
@@ -165,6 +184,6 @@ The agent will never present itself as a lawyer, mortgage adviser, surveyor, ins
 
 ## v0.1 scope
 
-Included: CLI, mock listings, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, eval suite, MCP connector stub.
+Included: CLI, mock listings, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, and connector stubs.
 
 Not included: live listing feeds, autonomous browsing, outbound calls, negotiation automation, legal or mortgage advice, transaction management.

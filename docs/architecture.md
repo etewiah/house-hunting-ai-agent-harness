@@ -37,7 +37,7 @@ Connectors hide external systems:
 
 - local files
 - mock listing APIs
-- MCP tools
+- optional MCP tools
 - maps, schools, calendars, and notification services
 
 ## Runtime Flow
@@ -50,3 +50,9 @@ Connectors hide external systems:
 6. Generate tour or offer-prep outputs.
 7. Trace every step.
 
+## Agent Access
+
+Coding agents can use the harness directly by reading the repository, importing Python
+modules, running the CLI, and executing tests. The MCP server is an optional compatibility
+layer for clients that need MCP tool discovery; it is not required for repo-native agent
+workflows.
