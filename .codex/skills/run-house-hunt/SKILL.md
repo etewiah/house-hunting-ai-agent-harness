@@ -1,26 +1,20 @@
 ---
 name: run-house-hunt
-description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, and optional HomesToCompare link creation. No HTTP server or browser needed.
+description: Run the full house-hunting AI agent pipeline for a buyer brief — intake, ranking, explanation, comparison, affordability, and tour prep. No HTTP server, browser, or external model API key needed.
 metadata:
   tags: house-hunt, harness, ranking, comparison, buyer-agent
 ---
 
 # Run House Hunt Skill
 
-Run the full buyer-agent pipeline from a plain-English brief: parse preferences, rank listings, explain matches, and optionally create a side-by-side comparison on HomesToCompare.
+Run the full buyer-agent pipeline from a plain-English brief: parse preferences, rank listings, explain matches, compare homes, and prepare next steps.
 
 ## Prerequisites (check before running)
 
 - Python 3.10+ and `uv`
 - Run commands from the harness root
-- Environment variables exported in the shell if needed (see `.env.example`; this repo does not auto-load `.env`)
-- For AI-powered intake and explanations: `ANTHROPIC_API_KEY`
-- For HomesToCompare comparison creation: `H2C_BASE_URL` and `H2C_API_KEY`
-
-Verify keys:
-```bash
-env | grep -E "ANTHROPIC_API_KEY|H2C_BASE_URL|H2C_API_KEY" || echo "No optional keys exported"
-```
+- No model provider key is required when an LLM agent is using this skill; the agent supplies the reasoning. If `ANTHROPIC_API_KEY` is exported, the standalone harness may use its optional Anthropic adapter for intake and explanations.
+- No HomesToCompare API key is required for this skill; it uses local harness functions and mock or provided listing data.
 
 ## Your task
 
@@ -96,37 +90,7 @@ EOF
 
 Replace `BRIEF_GOES_HERE` with the actual buyer brief.
 
-### Step 3 — Optionally create a HomesToCompare comparison
-
-If `H2C_BASE_URL` and `H2C_API_KEY` are exported, call `create_comparison()`:
-
-```bash
-uv run --extra dev python - <<'EOF'
-import os
-
-from src.app import build_app
-from src.connectors.homestocompare_connector import HomesToCompareConnector
-
-brief = "BRIEF_GOES_HERE"
-base_url = os.environ.get("H2C_BASE_URL")
-api_key = os.environ.get("H2C_API_KEY")
-
-connector = HomesToCompareConnector(base_url=base_url, api_key=api_key) if base_url and api_key else None
-app = build_app()
-app.h2c_connector = connector
-
-app.intake(brief)
-app.triage(limit=5)
-result = app.create_comparison(count=2)
-
-if result.get("success") or result.get("comparison_url") or result.get("share_url"):
-    print(f"Comparison URL: {result.get('comparison_url') or result.get('share_url')}")
-else:
-    print(f"Skipped: {result.get('reason', result)}")
-EOF
-```
-
-### Step 4 — Export results (optional)
+### Step 3 — Export results (optional)
 
 ```bash
 uv run house-hunt demo --export-path results.csv
@@ -135,14 +99,13 @@ uv run house-hunt demo --export-path results.html
 
 Or via Python, pass `ExportOptions` directly to `app.export()`.
 
-### Step 5 — Report back
+### Step 4 — Report back
 
 Show the user:
 - The parsed **BuyerProfile** (confirm the brief was understood correctly)
 - The **ranked listing table** (title, score, price, location, warnings)
 - The **comparison summary** (top 3 head-to-head)
 - The **affordability estimate** for the top match (monthly payment, deposit, loan)
-- The **HomesToCompare URL** if a comparison was created
 - The **trace file path** for inspection
 
 ## Troubleshooting
@@ -151,18 +114,15 @@ Show the user:
 |---|---|---|
 | `ModuleNotFoundError: src` | Not running from harness root | `cd house-hunting-ai-agent-harness` first |
 | `No listings matched` | Location query too specific for mock data | Try London/King's Cross, Manchester, Bristol, or Leeds examples |
-| `LLM adapter not available` | `ANTHROPIC_API_KEY` not set | Falls back to regex intake automatically |
-| `HomesToCompare connector not configured` | `H2C_BASE_URL` or `H2C_API_KEY` missing | Export both variables or skip comparison creation |
-| `Both listings must have source_url` | Mock listings use demo URLs | Expected in demo mode — real listings from `H2CListingConnector` have live URLs |
+| Regex-style intake/explanations | No standalone harness LLM adapter configured | Expected for agent-driven use; the calling LLM agent can interpret and summarize results |
 
 ## Key files
 
 | File | Purpose |
 |---|---|
 | `src/app.py` | `build_app()` — wires config, LLM, listings, orchestrator |
-| `src/harness/orchestrator.py` | Full pipeline: intake → triage → explain → compare → create_comparison |
+| `src/harness/orchestrator.py` | Full pipeline: intake → triage → explain → compare → next steps |
 | `src/skills/intake.py` | Brief → BuyerProfile (regex or LLM) |
 | `src/skills/ranking.py` | Score listings against profile |
-| `src/connectors/homestocompare_connector.py` | POST to HomesToCompare comparison API |
 | `evals/datasets/listings_small.jsonl` | Mock listing data across London, Manchester, Bristol, and Leeds |
 | `.env.example` | All supported environment variables |
