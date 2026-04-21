@@ -44,6 +44,7 @@ the CLI, call functions from `src/skills/`, and run the eval suite without any s
 setup.
 
 For agent-facing instructions, see [AGENTS.md](AGENTS.md).
+For Codex skill discovery, see [.codex/skills/run-house-hunt/SKILL.md](.codex/skills/run-house-hunt/SKILL.md).
 
 Useful direct entry points:
 
@@ -53,6 +54,7 @@ Useful direct entry points:
 | `uv run house-hunt demo --export-path report.html` | Writes a self-contained HTML report |
 | `uv run house-hunt demo --export-path shortlist.csv` | Writes a CSV shortlist |
 | `uv run --extra dev pytest` | Runs the eval suite |
+| `.codex/skills/run-house-hunt/SKILL.md` | Codex skill for running the full buyer brief pipeline |
 | `src/skills/*` | Repo-native skills for intake, ranking, comparison, exports, and next steps |
 | `src/models/capabilities.py` | Provider-facing protocols for optional adapters |
 

@@ -21,6 +21,18 @@ uv run house-hunt demo --export-path /tmp/house-hunt-shortlist.csv
 uv run --extra dev pytest
 ```
 
+## Codex Skills
+
+This repo includes a project-local Codex skill at
+`.codex/skills/run-house-hunt/SKILL.md`. Use it when the user asks Codex to run the
+house-hunting pipeline from a buyer brief.
+
+Example prompt:
+
+```text
+Use the run-house-hunt skill for: 3-bed near Bristol, budget £400k, need parking and a garden
+```
+
 ## Important Modules
 
 - `src/models/schemas.py`: shared dataclasses and source labels.
