@@ -8,4 +8,5 @@ from src.models.schemas import BuyerProfile, RankedListing
 class SessionState:
     buyer_profile: BuyerProfile | None = None
     ranked_listings: list[RankedListing] = field(default_factory=list)
+    triage_warnings: list[str] = field(default_factory=list)
     approvals: list[str] = field(default_factory=list)

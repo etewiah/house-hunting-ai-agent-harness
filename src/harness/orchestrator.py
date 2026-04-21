@@ -9,6 +9,7 @@ from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes
 from src.skills.explanation import explain_ranked_listing
 from src.skills.intake import parse_buyer_brief
+from src.skills.listing_search import filter_by_location
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings
 from src.skills.tour_prep import generate_tour_questions
@@ -36,7 +37,9 @@ class HouseHuntOrchestrator:
         if self.state.buyer_profile is None:
             raise ValueError("Cannot triage listings before preference intake.")
         candidates = self.listings.search(self.state.buyer_profile)
-        ranked = rank_listings(self.state.buyer_profile, candidates)[:limit]
+        located, warnings = filter_by_location(self.state.buyer_profile.location_query, candidates)
+        self.state.triage_warnings = warnings
+        ranked = rank_listings(self.state.buyer_profile, located)[:limit]
         self.state.ranked_listings = ranked
         self.tracer.record("triage.ranked_listings", ranked)
         return ranked

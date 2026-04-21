@@ -95,6 +95,9 @@ def run_interactive() -> None:
     print("\nSearching listings...\n")
     ranked = app.triage(limit=5)
 
+    for warning in app.state.triage_warnings:
+        print(f"Note: {warning}\n")
+
     if not ranked:
         print("No listings matched your brief in the current dataset.")
         print("Try relaxing your budget or commute requirements.")

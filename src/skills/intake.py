@@ -43,6 +43,23 @@ def _extract_location(text: str) -> str:
     return "unknown"
 
 
+_MUST_HAVE_SYNONYMS: dict[str, list[str]] = {
+    "garden": ["garden", "outdoor space", "rear garden", "private garden"],
+    "walkable": ["walkable", "walking distance", "walk to"],
+    "quiet": ["quiet", "peaceful", "no through road", "low traffic"],
+    "parking": ["parking", "off-street", "driveway", "garage"],
+    "schools": ["school", "ofsted", "catchment"],
+}
+
+_NICE_TO_HAVE_SYNONYMS: dict[str, list[str]] = {
+    "period": ["period", "victorian", "edwardian", "georgian"],
+    "renovated": ["renovated", "refurbished", "modernised", "updated"],
+    "station": ["station", "tube", "metro", "tram", "transport links"],
+    "park": ["park", "green space", "common", "recreation ground"],
+    "office": ["home office", "study", "work from home"],
+}
+
+
 class LlmAdapter(Protocol):
     def generate(self, prompt: str, model: str) -> str: ...
 
@@ -84,12 +101,12 @@ def _parse_with_regex(text: str) -> BuyerProfile:
     must_haves: list[str] = []
     nice_to_haves: list[str] = []
 
-    for feature in ["garden", "walkable", "quiet", "parking", "schools"]:
-        if feature in lowered:
+    for feature, synonyms in _MUST_HAVE_SYNONYMS.items():
+        if any(s in lowered for s in synonyms):
             must_haves.append(feature)
 
-    for feature in ["period", "renovated", "station", "park", "office"]:
-        if feature in lowered:
+    for feature, synonyms in _NICE_TO_HAVE_SYNONYMS.items():
+        if any(s in lowered for s in synonyms):
             nice_to_haves.append(feature)
 
     return BuyerProfile(
