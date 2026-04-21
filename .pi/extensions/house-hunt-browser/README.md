@@ -6,7 +6,9 @@ Project-local Pi extension that adds browser/search-oriented tools for the `brow
 
 - `property_web_search` — search the web for property listing pages
 - `property_listing_extract` — fetch and normalize a listing page into the harness listing shape
+- `extract_property_listings` — normalize multiple listing URLs in one call
 - `run_house_hunt_harness` — run the Python harness on normalized listings
+- `house_hunt_from_web` — end-to-end search + extract + rank in one tool
 
 ## Usage
 

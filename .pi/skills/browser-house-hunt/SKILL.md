@@ -10,8 +10,10 @@ metadata:
 Use this skill when the user wants help finding actual properties to buy or rent and you have browser, search, scraping, API, or page-reading tools available.
 
 If the project-local Pi extension `house-hunt-browser` is loaded, prefer its tools:
+- `house_hunt_from_web` for end-to-end runs
 - `property_web_search`
 - `property_listing_extract`
+- `extract_property_listings`
 - `run_house_hunt_harness`
 
 This skill treats **web discovery** and **harness evaluation** as separate steps:
@@ -19,6 +21,10 @@ This skill treats **web discovery** and **harness evaluation** as separate steps
 2. normalize each listing into the repo's `Listing` shape
 3. run the harness pipeline using those supplied listings
 4. report ranked matches, explanations, comparison, affordability, and next steps
+
+When the extension is available, the fastest path is usually:
+1. call `house_hunt_from_web`
+2. if results are weak, fall back to `property_web_search` + `extract_property_listings` + `run_house_hunt_harness`
 
 If browser/search tools are **not** available, tell the user you can still run the harness if they paste listing URLs or listing data.
 

@@ -25,6 +25,11 @@ const extractParams = Type.Object({
   commuteMinutes: Type.Optional(Type.Integer({ minimum: 0, description: "Known commute time if already computed elsewhere" })),
 });
 
+const batchExtractParams = Type.Object({
+  urls: Type.Array(Type.String({ description: "Property listing URL" }), { minItems: 1, maxItems: 20 }),
+  commuteMinutesByUrl: Type.Optional(Type.Record(Type.String(), Type.Integer({ minimum: 0 }))),
+});
+
 const listingSchema = Type.Object({
   id: Type.String(),
   title: Type.String(),
@@ -41,6 +46,14 @@ const listingSchema = Type.Object({
 const runParams = Type.Object({
   brief: Type.String({ description: "Buyer brief in plain English" }),
   listings: Type.Array(listingSchema, { minItems: 1, description: "Normalized listings to rank" }),
+  exportHtmlPath: Type.Optional(Type.String({ description: "Optional HTML export path" })),
+  exportCsvPath: Type.Optional(Type.String({ description: "Optional CSV export path" })),
+});
+
+const webRunParams = Type.Object({
+  brief: Type.String({ description: "Buyer brief in plain English" }),
+  maxResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 12, default: 6 })),
+  sites: Type.Optional(Type.Array(Type.String({ description: "Domain to include" }))),
   exportHtmlPath: Type.Optional(Type.String({ description: "Optional HTML export path" })),
   exportCsvPath: Type.Optional(Type.String({ description: "Optional CSV export path" })),
 });
@@ -101,6 +114,35 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
+    name: "extract_property_listings",
+    label: "Extract Property Listings",
+    description: "Fetch and normalize multiple property listing URLs into the house-hunt harness listing format.",
+    promptSnippet: "Extract a batch of property listing URLs into normalized listing objects.",
+    promptGuidelines: [
+      "Use this when you already have several property URLs.",
+      "Skip pages that cannot be fetched and keep the successful listings.",
+    ],
+    parameters: batchExtractParams,
+    async execute(_toolCallId, params, signal) {
+      const listings: ListingDict[] = [];
+      const failed: Array<{ url: string; error: string }> = [];
+      for (const url of params.urls) {
+        try {
+          const listing = await extractListing(url, params.commuteMinutesByUrl?.[url] ?? null, signal);
+          listings.push(listing);
+        } catch (error) {
+          failed.push({ url, error: error instanceof Error ? error.message : String(error) });
+        }
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ extracted: listings.length, failed: failed.length, listings, failed }, null, 2) }],
+        details: { listings, failed },
+        isError: listings.length === 0,
+      };
+    },
+  });
+
+  pi.registerTool({
     name: "run_house_hunt_harness",
     label: "Run House Hunt Harness",
     description: "Run the Python house-hunt harness on a buyer brief plus normalized listings.",
@@ -111,40 +153,61 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     ],
     parameters: runParams,
     async execute(_toolCallId, params, signal) {
-      const tempDir = path.join(process.cwd(), ".tmp");
-      await fs.mkdir(tempDir, { recursive: true });
-      const listingsPath = path.join(tempDir, `house-hunt-${Date.now()}.json`);
-      await fs.writeFile(listingsPath, JSON.stringify(params.listings, null, 2), "utf-8");
-
-      const commandArgs = [
-        "run",
-        "--extra",
-        "dev",
-        "python",
-        ".pi/skills/browser-house-hunt/run_house_hunt.py",
-        "--brief",
+      const harness = await runHarness(
+        pi,
         params.brief,
-        "--listings-file",
-        listingsPath,
-      ];
-      if (params.exportHtmlPath) {
-        commandArgs.push("--export-html", params.exportHtmlPath);
+        params.listings,
+        signal,
+        params.exportHtmlPath,
+        params.exportCsvPath,
+      );
+      return {
+        content: [{ type: "text", text: harness.output }],
+        details: harness.details,
+        isError: harness.isError,
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "house_hunt_from_web",
+    label: "House Hunt From Web",
+    description: "Search listing sites, extract candidate property pages, normalize them, and run the house-hunt harness in one step.",
+    promptSnippet: "Search the web for property listings and run the full house-hunt harness workflow.",
+    promptGuidelines: [
+      "Use this for end-to-end browser-assisted house hunting.",
+      "Report clearly when no pages could be extracted or when sites block access.",
+    ],
+    parameters: webRunParams,
+    async execute(_toolCallId, params, signal) {
+      const results = await searchListings(params.brief, params.maxResults ?? 6, params.sites ?? [...DEFAULT_SITES], signal);
+      const listings: ListingDict[] = [];
+      const failed: Array<{ url: string; error: string }> = [];
+      for (const result of results) {
+        try {
+          listings.push(await extractListing(result.url, null, signal));
+        } catch (error) {
+          failed.push({ url: result.url, error: error instanceof Error ? error.message : String(error) });
+        }
       }
-      if (params.exportCsvPath) {
-        commandArgs.push("--export-csv", params.exportCsvPath);
+      if (listings.length === 0) {
+        return {
+          content: [{ type: "text", text: `Search found ${results.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}` }],
+          details: { searchResults: results, listings, failed },
+          isError: true,
+        };
       }
 
-      const result = await pi.exec("uv", commandArgs, { signal });
-      const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+      const harness = await runHarness(pi, params.brief, listings, signal, params.exportHtmlPath, params.exportCsvPath);
       return {
-        content: [{ type: "text", text: output || "Harness completed with no output." }],
+        content: [{ type: "text", text: harness.output }],
         details: {
-          listingsPath,
-          command: ["uv", ...commandArgs].join(" "),
-          exitCode: result.code,
-          killed: result.killed,
+          searchResults: results,
+          listings,
+          failed,
+          ...harness.details,
         },
-        isError: result.code !== 0,
+        isError: harness.isError,
       };
     },
   });
@@ -385,6 +448,47 @@ function createListingId(rawUrl: string): string {
   } catch {
     return `listing-${Date.now()}`;
   }
+}
+
+async function runHarness(
+  pi: ExtensionAPI,
+  brief: string,
+  listings: ListingDict[],
+  signal: AbortSignal | undefined,
+  exportHtmlPath?: string,
+  exportCsvPath?: string,
+): Promise<{ output: string; details: Record<string, unknown>; isError: boolean }> {
+  const tempDir = path.join(process.cwd(), ".tmp");
+  await fs.mkdir(tempDir, { recursive: true });
+  const listingsPath = path.join(tempDir, `house-hunt-${Date.now()}.json`);
+  await fs.writeFile(listingsPath, JSON.stringify(listings, null, 2), "utf-8");
+
+  const commandArgs = [
+    "run",
+    "--extra",
+    "dev",
+    "python",
+    ".pi/skills/browser-house-hunt/run_house_hunt.py",
+    "--brief",
+    brief,
+    "--listings-file",
+    listingsPath,
+  ];
+  if (exportHtmlPath) commandArgs.push("--export-html", exportHtmlPath);
+  if (exportCsvPath) commandArgs.push("--export-csv", exportCsvPath);
+
+  const result = await pi.exec("uv", commandArgs, { signal });
+  const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim() || "Harness completed with no output.";
+  return {
+    output,
+    details: {
+      listingsPath,
+      command: ["uv", ...commandArgs].join(" "),
+      exitCode: result.code,
+      killed: result.killed,
+    },
+    isError: result.code !== 0,
+  };
 }
 
 function escapeRegExp(value: string): string {
