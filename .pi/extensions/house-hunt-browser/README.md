@@ -26,6 +26,12 @@ Then use the project skill:
 /skill:browser-house-hunt
 ```
 
+Or run the built-in smoke test command:
+
+```bash
+/house-hunt-smoke 2-bed flat near Birmingham New Street, under £250k, parking preferred
+```
+
 ## Notes
 
 - Search currently uses DuckDuckGo HTML results and then filters to known property hosts.

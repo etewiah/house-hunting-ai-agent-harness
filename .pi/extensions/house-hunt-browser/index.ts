@@ -89,6 +89,38 @@ type ListingExtractionResult = {
 };
 
 export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
+  pi.registerCommand("house-hunt-smoke", {
+    description: "Smoke-test the browser house-hunt flow: /house-hunt-smoke <buyer brief>",
+    handler: async (args, ctx) => {
+      const brief = args.trim();
+      if (!brief) {
+        ctx.ui.notify("Usage: /house-hunt-smoke <buyer brief>", "warning");
+        return;
+      }
+
+      ctx.ui.notify("Running browser house-hunt smoke test...", "info");
+      const result = await performWebHouseHunt(
+        pi,
+        brief,
+        6,
+        [...DEFAULT_SITES],
+        undefined,
+        undefined,
+        undefined,
+      );
+      pi.sendMessage(
+        {
+          customType: "house-hunt-smoke",
+          content: formatSmokeSummary(brief, result),
+          display: true,
+          details: result,
+        },
+        { triggerTurn: false, deliverAs: "nextTurn" },
+      );
+      ctx.ui.notify(`Smoke test complete. Trace: ${result.tracePath}`, result.isError ? "warning" : "success");
+    },
+  });
+
   pi.registerTool({
     name: "property_web_search",
     label: "Property Web Search",
@@ -208,47 +240,103 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     ],
     parameters: webRunParams,
     async execute(_toolCallId, params, signal) {
-      const results = await searchListings(params.brief, params.maxResults ?? 6, params.sites ?? [...DEFAULT_SITES], signal);
-      const listings: ListingDict[] = [];
-      const extracted: ListingExtractionResult[] = [];
-      const failed: Array<{ url: string; error: string }> = [];
-      for (const result of results) {
-        try {
-          const extraction = await extractListing(result.url, null, signal);
-          listings.push(extraction.listing);
-          extracted.push(extraction);
-        } catch (error) {
-          failed.push({ url: result.url, error: error instanceof Error ? error.message : String(error) });
-        }
-      }
-      if (listings.length === 0) {
-        const tracePath = await writeExtensionTrace("web-run-failed", { searchResults: results, listings, extracted, failed });
-        return {
-          content: [{ type: "text", text: `Search found ${results.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}\n\nTrace: ${tracePath}` }],
-          details: { searchResults: results, listings, extracted, failed, tracePath },
-          isError: true,
-        };
-      }
-
-      const harness = await runHarness(pi, params.brief, listings, signal, params.exportHtmlPath, params.exportCsvPath);
-      const details = {
-        searchResults: results,
-        listings,
-        extracted,
-        failed,
-        ...harness.details,
-      };
-      const tracePath = await writeExtensionTrace("web-run", details);
+      const result = await performWebHouseHunt(
+        pi,
+        params.brief,
+        params.maxResults ?? 6,
+        params.sites ?? [...DEFAULT_SITES],
+        params.exportHtmlPath,
+        params.exportCsvPath,
+        signal,
+      );
       return {
-        content: [{ type: "text", text: `${harness.output}\nTrace: ${tracePath}` }],
-        details: {
-          ...details,
-          tracePath,
-        },
-        isError: harness.isError,
+        content: [{ type: "text", text: `${result.output}\nTrace: ${result.tracePath}` }],
+        details: result,
+        isError: result.isError,
       };
     },
   });
+}
+
+async function performWebHouseHunt(
+  pi: ExtensionAPI,
+  brief: string,
+  maxResults: number,
+  sites: string[],
+  exportHtmlPath?: string,
+  exportCsvPath?: string,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown> & { output: string; tracePath: string; isError: boolean }> {
+  const searchResults = await searchListings(brief, maxResults, sites, signal);
+  const listings: ListingDict[] = [];
+  const extracted: ListingExtractionResult[] = [];
+  const failed: Array<{ url: string; error: string }> = [];
+
+  for (const result of searchResults) {
+    try {
+      const extraction = await extractListing(result.url, null, signal);
+      listings.push(extraction.listing);
+      extracted.push(extraction);
+    } catch (error) {
+      failed.push({ url: result.url, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  if (listings.length === 0) {
+    const tracePath = await writeExtensionTrace("web-run-failed", { searchResults, listings, extracted, failed, brief });
+    return {
+      output: `Search found ${searchResults.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}`,
+      searchResults,
+      listings,
+      extracted,
+      failed,
+      tracePath,
+      isError: true,
+    };
+  }
+
+  const harness = await runHarness(pi, brief, listings, signal, exportHtmlPath, exportCsvPath);
+  const details = {
+    output: harness.output,
+    searchResults,
+    listings,
+    extracted,
+    failed,
+    ...harness.details,
+    isError: harness.isError,
+  };
+  const tracePath = await writeExtensionTrace("web-run", details);
+  return {
+    ...details,
+    tracePath,
+    isError: harness.isError,
+  };
+}
+
+function formatSmokeSummary(brief: string, result: Record<string, unknown> & { tracePath: string; isError: boolean }): string {
+  const searchResults = Array.isArray(result.searchResults) ? result.searchResults as Array<{ title: string; url: string }> : [];
+  const extracted = Array.isArray(result.extracted) ? result.extracted as ListingExtractionResult[] : [];
+  const failed = Array.isArray(result.failed) ? result.failed as Array<{ url: string; error: string }> : [];
+  const parserCounts = extracted.reduce<Record<string, number>>((acc, item) => {
+    acc[item.diagnostics.parser] = (acc[item.diagnostics.parser] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return [
+    "# House Hunt Smoke Test",
+    "",
+    `Brief: ${brief}`,
+    `Search results: ${searchResults.length}`,
+    `Extracted listings: ${extracted.length}`,
+    `Failed extractions: ${failed.length}`,
+    `Parser usage: ${Object.entries(parserCounts).map(([key, value]) => `${key}=${value}`).join(", ") || "none"}`,
+    "",
+    "Top extracted listings:",
+    ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser})`),
+    ...(failed.length > 0 ? ["", "Failed URLs:", ...failed.slice(0, 5).map((item) => `- ${item.url}: ${item.error}`)] : []),
+    "",
+    `Trace: ${result.tracePath}`,
+  ].join("\n");
 }
 
 async function searchListings(query: string, maxResults: number, sites: string[], signal?: AbortSignal) {
