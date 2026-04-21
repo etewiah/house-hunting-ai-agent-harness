@@ -78,6 +78,7 @@ type PartialListing = Partial<Omit<ListingDict, "commute_minutes">> & {
 type ListingExtractionDiagnostics = {
   parser: string;
   sourceHints: string[];
+  fieldSources: Record<string, string>;
   host?: string;
   hadJsonLd: boolean;
 };
@@ -100,12 +101,17 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     parameters: searchParams,
     async execute(_toolCallId, params, signal) {
       const results = await searchListings(params.query, params.maxResults ?? 8, params.sites ?? [...DEFAULT_SITES], signal);
+      const tracePath = await writeExtensionTrace("search", {
+        query: params.query,
+        count: results.length,
+        results,
+      });
       const summary = results.length === 0
-        ? "No listing URLs found."
-        : results.map((result, index) => `${index + 1}. ${result.title} — ${result.url}`).join("\n");
+        ? `No listing URLs found. Trace: ${tracePath}`
+        : `${results.map((result, index) => `${index + 1}. ${result.title} — ${result.url}`).join("\n")}\n\nTrace: ${tracePath}`;
       return {
         content: [{ type: "text", text: summary }],
-        details: { query: params.query, count: results.length, results },
+        details: { query: params.query, count: results.length, results, tracePath },
       };
     },
   });
@@ -122,9 +128,10 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
     parameters: extractParams,
     async execute(_toolCallId, params, signal) {
       const extraction = await extractListing(params.url, params.commuteMinutes ?? null, signal);
+      const tracePath = await writeExtensionTrace("extract", extraction);
       return {
-        content: [{ type: "text", text: JSON.stringify(extraction.listing, null, 2) }],
-        details: extraction,
+        content: [{ type: "text", text: `${JSON.stringify(extraction.listing, null, 2)}\n\nDiagnostics: ${JSON.stringify(extraction.diagnostics, null, 2)}\n\nTrace: ${tracePath}` }],
+        details: { ...extraction, tracePath },
       };
     },
   });
@@ -152,9 +159,11 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
           failed.push({ url, error: error instanceof Error ? error.message : String(error) });
         }
       }
+      const tracePayload = { listings, extracted, failed };
+      const tracePath = await writeExtensionTrace("batch-extract", tracePayload);
       return {
-        content: [{ type: "text", text: JSON.stringify({ extracted: listings.length, failed: failed.length, listings, failed }, null, 2) }],
-        details: { listings, extracted, failed },
+        content: [{ type: "text", text: JSON.stringify({ extracted: listings.length, failed: failed.length, listings, failed, tracePath }, null, 2) }],
+        details: { listings, extracted, failed, tracePath },
         isError: listings.length === 0,
       };
     },
@@ -179,9 +188,10 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         params.exportHtmlPath,
         params.exportCsvPath,
       );
+      const tracePath = await writeExtensionTrace("harness-run", harness.details);
       return {
-        content: [{ type: "text", text: harness.output }],
-        details: harness.details,
+        content: [{ type: "text", text: `${harness.output}\nTrace: ${tracePath}` }],
+        details: { ...harness.details, tracePath },
         isError: harness.isError,
       };
     },
@@ -212,22 +222,28 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         }
       }
       if (listings.length === 0) {
+        const tracePath = await writeExtensionTrace("web-run-failed", { searchResults: results, listings, extracted, failed });
         return {
-          content: [{ type: "text", text: `Search found ${results.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}` }],
-          details: { searchResults: results, listings, extracted, failed },
+          content: [{ type: "text", text: `Search found ${results.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}\n\nTrace: ${tracePath}` }],
+          details: { searchResults: results, listings, extracted, failed, tracePath },
           isError: true,
         };
       }
 
       const harness = await runHarness(pi, params.brief, listings, signal, params.exportHtmlPath, params.exportCsvPath);
+      const details = {
+        searchResults: results,
+        listings,
+        extracted,
+        failed,
+        ...harness.details,
+      };
+      const tracePath = await writeExtensionTrace("web-run", details);
       return {
-        content: [{ type: "text", text: harness.output }],
+        content: [{ type: "text", text: `${harness.output}\nTrace: ${tracePath}` }],
         details: {
-          searchResults: results,
-          listings,
-          extracted,
-          failed,
-          ...harness.details,
+          ...details,
+          tracePath,
         },
         isError: harness.isError,
       };
@@ -715,21 +731,24 @@ function buildExtractionDiagnostics(
   siteSpecific: PartialListing & { _parser?: string },
 ): ListingExtractionDiagnostics {
   const sourceHints: string[] = [];
+  const fieldSources: Record<string, string> = {};
   if (siteSpecific._parser && siteSpecific._parser !== "generic") {
     sourceHints.push(`site:${siteSpecific._parser}`);
   }
   for (const field of ["title", "description", "price", "bedrooms", "bathrooms", "location", "source_url"] as const) {
     if (siteSpecific[field] !== undefined && siteSpecific[field] !== "") {
-      sourceHints.push(`${field}:site_specific`);
+      fieldSources[field] = "site_specific";
     } else if (jsonLdObjects.length > 0) {
-      sourceHints.push(`${field}:fallback_possible`);
+      fieldSources[field] = "json_ld_or_fallback";
     } else {
-      sourceHints.push(`${field}:text_or_meta`);
+      fieldSources[field] = "text_or_meta";
     }
+    sourceHints.push(`${field}:${fieldSources[field]}`);
   }
   return {
     parser: siteSpecific._parser || "generic",
     sourceHints,
+    fieldSources,
     host: safeHostname(url),
     hadJsonLd: jsonLdObjects.length > 0,
   };
@@ -782,6 +801,14 @@ async function runHarness(
     },
     isError: result.code !== 0,
   };
+}
+
+async function writeExtensionTrace(kind: string, payload: unknown): Promise<string> {
+  const tempDir = path.join(process.cwd(), ".tmp");
+  await fs.mkdir(tempDir, { recursive: true });
+  const tracePath = path.join(tempDir, `house-hunt-extension-${kind}-${Date.now()}.json`);
+  await fs.writeFile(tracePath, JSON.stringify(payload, null, 2), "utf-8");
+  return tracePath;
 }
 
 function escapeRegExp(value: string): string {
