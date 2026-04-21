@@ -1,0 +1,11 @@
+{
+  "name": "house-hunt-browser-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

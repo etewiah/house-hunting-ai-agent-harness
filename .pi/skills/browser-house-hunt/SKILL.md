@@ -9,6 +9,11 @@ metadata:
 
 Use this skill when the user wants help finding actual properties to buy or rent and you have browser, search, scraping, API, or page-reading tools available.
 
+If the project-local Pi extension `house-hunt-browser` is loaded, prefer its tools:
+- `property_web_search`
+- `property_listing_extract`
+- `run_house_hunt_harness`
+
 This skill treats **web discovery** and **harness evaluation** as separate steps:
 1. collect candidate listings from Rightmove / Zoopla / platform APIs / browser results
 2. normalize each listing into the repo's `Listing` shape
