@@ -1,6 +1,6 @@
 import argparse
 from src.app import build_app
-from src.models.schemas import AffordabilityEstimate, BuyerProfile, RankedListing
+from src.models.schemas import AffordabilityEstimate, BuyerProfile, ExportOptions, RankedListing
 
 DEFAULT_BRIEF = (
     "I want a 3-bed within 45 minutes of King's Cross, budget £700k, "
@@ -137,7 +137,7 @@ def run_interactive() -> None:
     print(f"Session trace saved to {trace_path}")
 
 
-def run_demo() -> None:
+def run_demo(export_path: str | None = None) -> None:
     print(f"Demo brief: {DEFAULT_BRIEF!r}\n")
     app = build_app()
     profile = app.intake(DEFAULT_BRIEF)
@@ -145,6 +145,9 @@ def run_demo() -> None:
     explanations = app.explain_top_matches()
     comparison = app.compare_top(count=3)
     next_steps = app.prep_next_steps()
+    export_result = None
+    if export_path is not None:
+        export_result = app.export(ExportOptions(format="csv", output_path=export_path))
     trace_path = app.tracer.flush("demo")
 
     print("## Buyer Profile\n")
@@ -158,6 +161,9 @@ def run_demo() -> None:
     print(comparison)
     print("\n## Affordability (top match)\n")
     print(_fmt_affordability(next_steps["affordability"]))
+    if export_result is not None:
+        print("\n## Export\n")
+        print(f"CSV written to {export_result.output_path}")
     print(f"\nTrace written to {trace_path}")
 
 
@@ -177,9 +183,13 @@ def main() -> None:
             "'serve' starts the MCP server for use with Claude Code"
         ),
     )
+    parser.add_argument(
+        "--export-path",
+        help="Write demo results to a CSV file. Currently supported with the demo command.",
+    )
     args = parser.parse_args()
     if args.command == "demo":
-        run_demo()
+        run_demo(export_path=args.export_path)
     elif args.command == "serve":
         from src.ui.mcp_server import mcp
         mcp.run()

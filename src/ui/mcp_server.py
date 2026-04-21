@@ -15,8 +15,10 @@ from mcp.server.fastmcp import FastMCP
 
 from src.app import build_app
 from src.models.schemas import Listing
+from src.models.schemas import ExportOptions, ExportPayload, RankedListing
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes as _compare_homes
+from src.skills.export import ExportOrchestrator
 from src.skills.intake import parse_buyer_brief
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings as _rank_listings
@@ -116,6 +118,32 @@ def offer_brief(listing: dict) -> str:
     Not legal, mortgage, or negotiation advice.
     """
     return generate_offer_brief(_to_listing(listing))
+
+
+@mcp.tool()
+def export_csv(ranked_listings: list[dict], output_path: str | None = None) -> dict:
+    """Export ranked listings to a CSV file.
+
+    Each ranked listing dict may be either the output from rank_listings or a dict
+    containing listing, score, matched, missed, and warnings keys.
+    """
+    ranked = []
+    for item in ranked_listings:
+        listing_data = item.get("listing", item)
+        ranked.append(
+            RankedListing(
+                listing=_to_listing(listing_data),
+                score=float(item.get("score", 0)),
+                matched=list(item.get("matched") or []),
+                missed=list(item.get("missed") or []),
+                warnings=list(item.get("warnings") or []),
+            )
+        )
+    result = ExportOrchestrator().export(
+        ExportPayload(ranked_listings=ranked),
+        ExportOptions(format="csv", output_path=output_path),
+    )
+    return asdict(result)
 
 
 @mcp.tool()

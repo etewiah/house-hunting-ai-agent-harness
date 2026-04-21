@@ -13,6 +13,7 @@ TraceEventName = Literal[
     "comparison.summary",
     "comparison.created",
     "next_steps.prepared",
+    "export.created",
 ]
 
 

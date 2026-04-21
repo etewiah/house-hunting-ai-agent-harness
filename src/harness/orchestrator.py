@@ -4,7 +4,8 @@ from src.connectors.mock_listing_api import MockListingApi
 from src.harness.policies import advice_boundary_notice
 from src.harness.session_state import SessionState
 from src.harness.tracing import TraceRecorder
-from src.models.schemas import BuyerProfile, RankedListing
+from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, RankedListing
+from src.skills.export import ExportOrchestrator
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes
 from src.skills.explanation import explain_ranked_listing
@@ -28,6 +29,7 @@ class HouseHuntOrchestrator:
         self.llm = llm
         self.state = SessionState()
         self.tracer = TraceRecorder(trace_dir)
+        self.exporter = ExportOrchestrator()
 
     def intake(self, brief: str) -> BuyerProfile:
         profile = parse_buyer_brief(brief, llm=self.llm)
@@ -91,4 +93,15 @@ class HouseHuntOrchestrator:
             "offer_brief": offer,
         }
         self.tracer.record("next_steps.prepared", result)
+        return result
+
+    def export(self, options: ExportOptions) -> ExportResult:
+        payload = ExportPayload(
+            buyer_profile=self.state.buyer_profile,
+            ranked_listings=self.state.ranked_listings,
+            session_id=self.state.session.session_id if self.state.session is not None else None,
+            external_refs=self.state.session.external_refs if self.state.session is not None else {},
+        )
+        result = self.exporter.export(payload, options)
+        self.tracer.record("export.created", result)
         return result
