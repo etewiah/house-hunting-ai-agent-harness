@@ -36,6 +36,44 @@ Questions to ask on the tour:
 
 ---
 
+## Using with Claude Code (recommended)
+
+The harness is designed to work alongside an AI like Claude Code. Claude handles data retrieval — browsing property sites, calling the HomesToCompare API — and the harness handles structure: scoring, comparison, affordability, guardrails, and tracing.
+
+**1. Add the server to your Claude Code config** (`~/.claude/claude_desktop_config.json` or `.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "house-hunt": {
+      "command": "uv",
+      "args": ["run", "house-hunt", "serve"],
+      "cwd": "/path/to/house-hunting-ai-agent-harness"
+    }
+  }
+}
+```
+
+**2. Start a conversation with Claude Code.** The harness exposes these tools:
+
+| Tool | What it does |
+|---|---|
+| `parse_brief` | Parses a natural language buyer brief into a structured profile |
+| `rank_listings` | Scores and ranks listings Claude retrieved against the brief |
+| `compare_homes` | Side-by-side comparison of up to 5 listings |
+| `estimate_affordability` | Monthly mortgage estimate for any price |
+| `tour_questions` | Property-specific questions to ask on a viewing |
+| `offer_brief` | Offer preparation summary |
+| `search_demo_listings` | Search the built-in mock dataset (no API key needed) |
+
+**3. Example prompt to Claude:**
+
+> Search Rightmove for 3-bed houses in Bristol under £450k, then use the house-hunt harness to rank them against my brief: need a garden, max 25 min commute to Temple Meads, quiet street preferred.
+
+Claude retrieves the listings; the harness ranks, compares, and prepares next steps.
+
+---
+
 ## For buyers: get started in 2 minutes
 
 **Prerequisite:** install [uv](https://docs.astral.sh/uv/getting-started/installation/) (a fast Python package manager).

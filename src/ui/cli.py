@@ -164,12 +164,19 @@ def main() -> None:
         "command",
         nargs="?",
         default="search",
-        choices=["search", "demo"],
-        help="'search' (default) starts an interactive session; 'demo' runs a fixed example",
+        choices=["search", "demo", "serve"],
+        help=(
+            "'search' (default) starts an interactive session; "
+            "'demo' runs a fixed example; "
+            "'serve' starts the MCP server for use with Claude Code"
+        ),
     )
     args = parser.parse_args()
     if args.command == "demo":
         run_demo()
+    elif args.command == "serve":
+        from src.ui.mcp_server import mcp
+        mcp.run()
     else:
         run_interactive()
 

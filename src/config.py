@@ -6,7 +6,7 @@ import os
 class Config:
     listings_data_path: str = "evals/datasets/listings_small.jsonl"
     trace_output_dir: str = ".traces"
-    model_name: str = "gpt-5.4-mini"
+    model_name: str = "claude-haiku-4-5-20251001"
 
 
 def load_config() -> Config:
