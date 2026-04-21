@@ -138,7 +138,7 @@ export const fixtureManifest = [
         price: 'site_specific',
         bedrooms: 'site_specific',
         bathrooms: 'site_specific',
-        location: 'text_or_meta',
+        location: 'text_regex',
       },
     },
   },
@@ -159,11 +159,11 @@ export const fixtureManifest = [
       features: ['parking', 'balcony', 'lift'],
       hadJsonLd: true,
       fieldSources: {
-        title: 'json_ld_or_fallback',
-        price: 'json_ld_or_fallback',
-        bedrooms: 'json_ld_or_fallback',
-        bathrooms: 'json_ld_or_fallback',
-        location: 'json_ld_or_fallback'
+        title: 'json_ld',
+        price: 'json_ld',
+        bedrooms: 'json_ld',
+        bathrooms: 'text_regex',
+        location: 'json_ld'
       },
     },
   },
@@ -183,8 +183,8 @@ export const fixtureManifest = [
       locationIncludes: 'Birmingham',
       featuresAnyOf: [['parking', 'garage'], ['balcony', 'garden']],
       fieldSources: {
-        title: 'json_ld_or_fallback',
-        location: 'json_ld_or_fallback'
+        title: 'json_ld',
+        location: 'json_ld'
       },
     },
   },

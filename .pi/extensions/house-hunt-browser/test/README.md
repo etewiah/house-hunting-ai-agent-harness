@@ -39,3 +39,15 @@ Assertion fields supported in `expected` include:
 - exact checks like `parser`, `title`, `price`, `location`
 - flexible checks like `allowedParsers`, `titleIncludes`, `minPrice`, `locationIncludes`, `featuresAnyOf`
 - provenance checks via `fieldSources`
+
+Field provenance is now more precise than before, with sources such as:
+- `site_specific`
+- `json_ld`
+- `meta_description`
+- `meta_og_title`
+- `title_tag`
+- `text_regex`
+- `text_excerpt`
+- `canonical_link`
+- `url_input`
+- `title_inference`

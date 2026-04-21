@@ -14,71 +14,79 @@ export function extractListingFromHtml(url, html, commuteMinutes = null) {
   const pageText = stripTags(removeScriptsAndStyles(html));
   const siteSpecific = extractSiteSpecificListing(url, html, pageText, jsonLdObjects);
 
-  const title = firstNonEmpty(
-    siteSpecific.title,
-    stringAtPath(mergedJsonLd, ["name"]),
-    extractMeta(html, "property=\"og:title\"", "content"),
-    extractTitleTag(html),
-    "Untitled listing",
-  );
-  const description = firstNonEmpty(
-    siteSpecific.description,
-    stringAtPath(mergedJsonLd, ["description"]),
-    extractMeta(html, "name=\"description\"", "content"),
-    pageText.slice(0, 280).trim(),
-    "",
-  );
-  const price = firstInt(
-    siteSpecific.price,
-    numberAtPath(mergedJsonLd, ["offers", "price"]),
-    numberAtPath(mergedJsonLd, ["offers", 0, "price"]),
-    extractCurrencyInt(pageText),
-    0,
-  );
-  const bedrooms = firstInt(
-    siteSpecific.bedrooms,
-    numberAtPath(mergedJsonLd, ["numberOfRooms"]),
-    regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i),
-    0,
-  );
-  const bathrooms = firstInt(
-    siteSpecific.bathrooms,
-    regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i),
-    0,
-  );
-  const canonicalUrl = firstNonEmpty(
-    siteSpecific.source_url,
-    stringAtPath(mergedJsonLd, ["url"]),
-    extractCanonicalUrl(html),
-    url,
-  );
-  const location = firstNonEmpty(
-    siteSpecific.location,
-    stringAtPath(mergedJsonLd, ["address", "addressLocality"]),
-    stringAtPath(mergedJsonLd, ["address", "streetAddress"]),
-    inferLocationFromTitle(title),
-    inferLocationFromText(pageText),
-    "unknown",
-  );
+  const titleChoice = pickString([
+    [siteSpecific.title, "site_specific"],
+    [stringAtPath(mergedJsonLd, ["name"]), "json_ld"],
+    [extractMeta(html, "property=\"og:title\"", "content"), "meta_og_title"],
+    [extractTitleTag(html), "title_tag"],
+    ["Untitled listing", "default"],
+  ]);
+  const descriptionChoice = pickString([
+    [siteSpecific.description, "site_specific"],
+    [stringAtPath(mergedJsonLd, ["description"]), "json_ld"],
+    [extractMeta(html, "name=\"description\"", "content"), "meta_description"],
+    [pageText.slice(0, 280).trim(), "text_excerpt"],
+    ["", "default"],
+  ]);
+  const priceChoice = pickNumber([
+    [siteSpecific.price, "site_specific"],
+    [numberAtPath(mergedJsonLd, ["offers", "price"]), "json_ld"],
+    [numberAtPath(mergedJsonLd, ["offers", 0, "price"]), "json_ld"],
+    [extractCurrencyInt(pageText), "text_regex"],
+    [0, "default"],
+  ]);
+  const bedroomsChoice = pickNumber([
+    [siteSpecific.bedrooms, "site_specific"],
+    [numberAtPath(mergedJsonLd, ["numberOfRooms"]), "json_ld"],
+    [regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i), "text_regex"],
+    [0, "default"],
+  ]);
+  const bathroomsChoice = pickNumber([
+    [siteSpecific.bathrooms, "site_specific"],
+    [regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i), "text_regex"],
+    [0, "default"],
+  ]);
+  const canonicalUrlChoice = pickString([
+    [siteSpecific.source_url, "site_specific"],
+    [stringAtPath(mergedJsonLd, ["url"]), "json_ld"],
+    [extractCanonicalUrl(html), "canonical_link"],
+    [url, "url_input"],
+  ]);
+  const locationChoice = pickString([
+    [siteSpecific.location, "site_specific"],
+    [stringAtPath(mergedJsonLd, ["address", "addressLocality"]), "json_ld"],
+    [stringAtPath(mergedJsonLd, ["address", "streetAddress"]), "json_ld"],
+    [inferLocationFromTitle(titleChoice.value), "title_inference"],
+    [inferLocationFromText(pageText), "text_regex"],
+    ["unknown", "default"],
+  ]);
   const features = Array.from(new Set([
     ...(siteSpecific.features ?? []),
     ...normalizeFeatures([pageText]),
   ])).filter(Boolean);
 
-  const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific);
+  const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific, {
+    title: titleChoice.source,
+    description: descriptionChoice.source,
+    price: priceChoice.source,
+    bedrooms: bedroomsChoice.source,
+    bathrooms: bathroomsChoice.source,
+    location: locationChoice.source,
+    source_url: canonicalUrlChoice.source,
+  });
 
   return {
     listing: {
-      id: siteSpecific.id || createListingId(canonicalUrl),
-      title,
-      price,
-      bedrooms,
-      bathrooms,
-      location,
+      id: siteSpecific.id || createListingId(canonicalUrlChoice.value),
+      title: titleChoice.value,
+      price: priceChoice.value,
+      bedrooms: bedroomsChoice.value,
+      bathrooms: bathroomsChoice.value,
+      location: locationChoice.value,
       commute_minutes: commuteMinutes,
       features,
-      description,
-      source_url: canonicalUrl,
+      description: descriptionChoice.value,
+      source_url: canonicalUrlChoice.value,
     },
     diagnostics,
   };
@@ -182,6 +190,20 @@ function firstInt(...values) {
     if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
   }
   return 0;
+}
+
+function pickString(candidates) {
+  for (const [value, source] of candidates) {
+    if (typeof value === "string" && value.trim()) return { value: value.trim(), source };
+  }
+  return { value: "", source: "default" };
+}
+
+function pickNumber(candidates) {
+  for (const [value, source] of candidates) {
+    if (typeof value === "number" && Number.isFinite(value)) return { value: Math.round(value), source };
+  }
+  return { value: 0, source: "default" };
 }
 
 function inferLocationFromTitle(title) {
@@ -391,15 +413,12 @@ function coerceInt(value) {
   return undefined;
 }
 
-function buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific) {
+function buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific, resolvedFieldSources) {
   const sourceHints = [];
-  const fieldSources = {};
+  const fieldSources = { ...resolvedFieldSources };
   if (siteSpecific._parser && siteSpecific._parser !== "generic") sourceHints.push(`site:${siteSpecific._parser}`);
   for (const field of ["title", "description", "price", "bedrooms", "bathrooms", "location", "source_url"]) {
-    if (siteSpecific[field] !== undefined && siteSpecific[field] !== "") fieldSources[field] = "site_specific";
-    else if (jsonLdObjects.length > 0) fieldSources[field] = "json_ld_or_fallback";
-    else fieldSources[field] = "text_or_meta";
-    sourceHints.push(`${field}:${fieldSources[field]}`);
+    sourceHints.push(`${field}:${fieldSources[field] ?? "unknown"}`);
   }
   return {
     parser: siteSpecific._parser || "generic",

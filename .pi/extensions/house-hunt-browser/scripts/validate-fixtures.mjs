@@ -74,7 +74,7 @@ for (const file of manifestFiles) {
   }
 }
 
-const byParser = countBy(fixtureManifest, (item) => item.expected?.parser ?? 'unknown');
+const byParser = countBy(fixtureManifest, (item) => item.expected?.parser ?? item.expected?.allowedParsers?.[0] ?? 'unknown');
 const byVariant = countBy(fixtureManifest, (item) => item.variant ?? 'unknown');
 
 console.log('Fixture summary');
