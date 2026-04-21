@@ -32,11 +32,19 @@ Or run the built-in smoke test command:
 /house-hunt-smoke 2-bed flat near Birmingham New Street, under £250k, parking preferred
 ```
 
+## Tests
+
+```bash
+cd .pi/extensions/house-hunt-browser
+npm test
+```
+
 ## Notes
 
 - Search currently uses DuckDuckGo HTML results and then filters to known property hosts.
 - Extraction now includes site-specific parsers for Rightmove, Zoopla, and OnTheMarket, with generic fallback parsing.
 - Extraction tool details include diagnostics such as parser used, host, whether JSON-LD was present, field source hints, and field-level provenance.
 - Search, extraction, and harness runs also write JSON trace files under `.tmp/` for debugging.
+- There is now a small fixture-based test suite inspired by `property_web_scraper` under `test/`.
 - Extraction is still heuristic and should be treated as a best-effort normalizer.
 - Keep `source_url` for every listing and do not invent missing values.

@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { extractListingFromHtml } from "./extractor-core.mjs";
 
 const DEFAULT_SITES = ["rightmove.co.uk", "zoopla.co.uk", "onthemarket.com"] as const;
 const FEATURE_KEYWORDS = [
@@ -380,79 +381,7 @@ async function extractListing(url: string, commuteMinutes: number | null, signal
     throw new Error(`Listing fetch failed: HTTP ${response.status}`);
   }
   const html = await response.text();
-  const jsonLdObjects = extractJsonLd(html);
-  const mergedJsonLd = pickBestJsonLd(jsonLdObjects);
-  const pageText = stripTags(removeScriptsAndStyles(html));
-  const siteSpecific = extractSiteSpecificListing(url, html, pageText, jsonLdObjects);
-
-  const title = firstNonEmpty(
-    siteSpecific.title,
-    stringAtPath(mergedJsonLd, ["name"]),
-    extractMeta(html, "property=\"og:title\"", "content"),
-    extractTitleTag(html),
-    "Untitled listing",
-  );
-  const description = firstNonEmpty(
-    siteSpecific.description,
-    stringAtPath(mergedJsonLd, ["description"]),
-    extractMeta(html, "name=\"description\"", "content"),
-    pageText.slice(0, 280).trim(),
-    "",
-  );
-  const price = firstInt(
-    siteSpecific.price,
-    numberAtPath(mergedJsonLd, ["offers", "price"]),
-    numberAtPath(mergedJsonLd, ["offers", 0, "price"]),
-    extractCurrencyInt(pageText),
-    0,
-  );
-  const bedrooms = firstInt(
-    siteSpecific.bedrooms,
-    numberAtPath(mergedJsonLd, ["numberOfRooms"]),
-    regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i),
-    0,
-  );
-  const bathrooms = firstInt(
-    siteSpecific.bathrooms,
-    regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i),
-    0,
-  );
-  const canonicalUrl = firstNonEmpty(
-    siteSpecific.source_url,
-    stringAtPath(mergedJsonLd, ["url"]),
-    extractCanonicalUrl(html),
-    url,
-  );
-  const location = firstNonEmpty(
-    siteSpecific.location,
-    stringAtPath(mergedJsonLd, ["address", "addressLocality"]),
-    stringAtPath(mergedJsonLd, ["address", "streetAddress"]),
-    inferLocationFromTitle(title),
-    inferLocationFromText(pageText),
-    "unknown",
-  );
-  const features = Array.from(new Set([
-    ...(siteSpecific.features ?? []),
-    ...FEATURE_KEYWORDS.filter((keyword) => new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(pageText)),
-  ])).filter(Boolean);
-
-  const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific);
-
-  return {
-    listing: {
-      id: siteSpecific.id || createListingId(canonicalUrl),
-      title,
-      price,
-      bedrooms,
-      bathrooms,
-      location,
-      commute_minutes: commuteMinutes,
-      features,
-      description,
-      source_url: canonicalUrl,
-    },
-    diagnostics,
-  };
+  return extractListingFromHtml(url, html, commuteMinutes) as ListingExtractionResult;
 }
 
 function extractJsonLd(html: string): any[] {
