@@ -66,4 +66,25 @@ def test_full_brief_parses_correctly():
     assert profile.min_bedrooms == 3
     assert profile.max_commute_minutes == 30
     assert "garden" in profile.must_haves
-    assert "quiet" in profile.must_haves
+    assert "quiet" in profile.nice_to_haves
+    assert "quiet" not in profile.must_haves
+
+
+def test_parking_preferred_is_nice_to_have_not_park_or_must_have():
+    profile = parse_buyer_brief("2-bed flat near Birmingham New Street, under £250k, parking preferred")
+    assert "parking" in profile.nice_to_haves
+    assert "parking" not in profile.must_haves
+    assert "park" not in profile.nice_to_haves
+
+
+def test_near_a_park_extracts_park_without_parking():
+    profile = parse_buyer_brief("2-bed flat in Birmingham near a park, under £250k")
+    assert "park" in profile.nice_to_haves
+    assert "parking" not in profile.must_haves
+    assert "parking" not in profile.nice_to_haves
+
+
+def test_required_and_preferred_features_are_separated():
+    profile = parse_buyer_brief("Need parking and a garden, office preferred")
+    assert sorted(profile.must_haves) == ["garden", "parking"]
+    assert profile.nice_to_haves == ["office"]

@@ -10,6 +10,7 @@ from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes
 from src.skills.explanation import explain_ranked_listing
 from src.skills.intake import parse_buyer_brief
+from src.skills.listing_input import listing_from_dict
 from src.skills.listing_search import filter_by_location, filter_listings
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings
@@ -61,6 +62,9 @@ class HouseHuntOrchestrator:
             {"warnings": location_warnings, "count": len(ranked), "items": ranked},
         )
         return ranked
+
+    def triage_listing_dicts(self, candidates: list[dict[str, object]], limit: int = 5) -> list[RankedListing]:
+        return self.triage_listings([listing_from_dict(candidate) for candidate in candidates], limit=limit)
 
     def explain_top_matches(self) -> list[str]:
         explanations = [

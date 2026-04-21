@@ -90,3 +90,40 @@ def test_triage_without_provider_gives_browser_first_guidance(tmp_path):
         assert "triage_listings(candidates)" in str(exc)
     else:
         raise AssertionError("Expected triage() to require a provider or supplied listings")
+
+
+def test_orchestrator_can_rank_browser_supplied_listing_dicts(tmp_path):
+    app = HouseHuntOrchestrator(listings=None, trace_dir=str(tmp_path))
+    app.intake("2-bed flat near Birmingham New Street, under £250k, parking preferred")
+
+    ranked = app.triage_listing_dicts(
+        [
+            {
+                "id": "best",
+                "title": "Station Quarter Flat",
+                "price": 235_000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 15,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/best",
+            },
+            {
+                "id": "small",
+                "title": "Tiny Flat",
+                "price": 190_000,
+                "bedrooms": 1,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 10,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/small",
+            },
+        ]
+    )
+
+    assert [item.listing.id for item in ranked][0] == "best"
+    assert [item.listing.id for item in ranked] == ["best", "small"]

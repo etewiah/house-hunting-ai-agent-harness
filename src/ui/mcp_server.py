@@ -19,6 +19,7 @@ from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import compare_homes as _compare_homes
 from src.skills.export import ExportOrchestrator
 from src.skills.intake import parse_buyer_brief
+from src.skills.listing_input import listing_from_dict
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings as _rank_listings
 from src.skills.tour_prep import generate_tour_questions
@@ -34,18 +35,7 @@ mcp = FastMCP(
 
 
 def _to_listing(d: dict) -> Listing:
-    return Listing(
-        id=str(d.get("id", "")),
-        title=str(d.get("title", "")),
-        price=int(d.get("price", 0)),
-        bedrooms=int(d.get("bedrooms", 0)),
-        bathrooms=int(d.get("bathrooms", 0)),
-        location=str(d.get("location", "")),
-        commute_minutes=d.get("commute_minutes"),
-        features=list(d.get("features") or []),
-        description=str(d.get("description", "")),
-        source_url=str(d.get("source_url", "")),
-    )
+    return listing_from_dict(d)
 
 
 @mcp.tool()
