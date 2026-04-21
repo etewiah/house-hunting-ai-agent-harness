@@ -25,10 +25,10 @@ When you add a new fixture:
 3. run `npm test`
 
 Current coverage includes variants for:
-- Rightmove standard and minimal pages
+- Rightmove standard, minimal, and duplicate-price pages
 - Zoopla standard and missing-bath pages
 - OnTheMarket structured-data and text-fallback pages
-- Generic non-portal fallback pages using JSON-LD and text/meta signals
+- Generic non-portal fallback pages using JSON-LD, meta-title, and text/meta signals
 
 Manifest metadata fields available per fixture include:
 - `variant`

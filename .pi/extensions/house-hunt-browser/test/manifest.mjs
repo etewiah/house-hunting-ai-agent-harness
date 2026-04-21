@@ -96,6 +96,30 @@ export const fixtureManifest = [
     },
   },
   {
+    name: 'rightmove site-specific price wins over duplicate body prices',
+    variant: 'duplicate-price',
+    sourceType: 'synthetic',
+    notes: 'Ensures PAGE_MODEL price beats misleading body text prices.',
+    file: 'rightmove_duplicate_price.html',
+    url: 'https://www.rightmove.co.uk/properties/999999999',
+    expected: {
+      parser: 'rightmove',
+      title: 'Garden Terrace',
+      price: 250000,
+      bedrooms: 3,
+      bathrooms: 2,
+      location: 'Kings Heath, Birmingham',
+      features: ['garden', 'garage'],
+      fieldSources: {
+        title: 'site_specific',
+        price: 'site_specific',
+        bedrooms: 'site_specific',
+        bathrooms: 'site_specific',
+        location: 'site_specific',
+      },
+    },
+  },
+  {
     name: 'zoopla fixture falls back cleanly when baths are absent',
     variant: 'missing-baths',
     sourceType: 'synthetic',
@@ -185,6 +209,31 @@ export const fixtureManifest = [
       fieldSources: {
         title: 'json_ld',
         location: 'json_ld'
+      },
+    },
+  },
+  {
+    name: 'generic host can prefer og title and url input fallback',
+    variant: 'generic-meta-title',
+    sourceType: 'synthetic',
+    notes: 'Exercises meta og:title, text regex extraction, and source_url fallback to input URL.',
+    file: 'generic_meta_title_fallback.html',
+    url: 'https://example-homes.test/listings/selly-oak-flat',
+    expected: {
+      parser: 'generic',
+      title: 'Selly Oak Balcony Flat',
+      price: 205000,
+      bedrooms: 2,
+      bathrooms: 1,
+      location: 'Selly Oak, Birmingham',
+      features: ['parking', 'balcony'],
+      fieldSources: {
+        title: 'meta_og_title',
+        price: 'text_regex',
+        bedrooms: 'text_regex',
+        bathrooms: 'text_regex',
+        location: 'text_regex',
+        source_url: 'url_input'
       },
     },
   },

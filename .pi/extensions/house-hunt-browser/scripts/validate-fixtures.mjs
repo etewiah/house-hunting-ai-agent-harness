@@ -76,6 +76,7 @@ for (const file of manifestFiles) {
 
 const byParser = countBy(fixtureManifest, (item) => item.expected?.parser ?? item.expected?.allowedParsers?.[0] ?? 'unknown');
 const byVariant = countBy(fixtureManifest, (item) => item.variant ?? 'unknown');
+const byFieldSource = countExpectedFieldSources(fixtureManifest);
 
 console.log('Fixture summary');
 console.log('---------------');
@@ -84,6 +85,7 @@ console.log(`Fixtures dir: ${fixturesDir}`);
 console.log(`Entries: ${fixtureManifest.length}`);
 console.log(`Parsers: ${formatCounts(byParser)}`);
 console.log(`Variants: ${formatCounts(byVariant)}`);
+console.log(`Field sources: ${formatNestedCounts(byFieldSource)}`);
 console.log('');
 
 if (warnings.length > 0) {
@@ -112,4 +114,21 @@ function countBy(items, getKey) {
 
 function formatCounts(counts) {
   return Object.entries(counts).map(([key, value]) => `${key}=${value}`).join(', ');
+}
+
+function countExpectedFieldSources(items) {
+  const counts = {};
+  for (const item of items) {
+    for (const [field, source] of Object.entries(item.expected?.fieldSources ?? {})) {
+      counts[field] ??= {};
+      counts[field][source] = (counts[field][source] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+function formatNestedCounts(counts) {
+  return Object.entries(counts)
+    .map(([field, sources]) => `${field}=[${formatCounts(sources)}]`)
+    .join('; ');
 }
