@@ -22,10 +22,25 @@ def _extract_bedrooms(text: str, default: int = 3) -> int:
 
 
 def _extract_commute(text: str) -> int | None:
-    match = re.search(r"(\d{2,3})\s*minutes?", text.lower())
+    match = re.search(r"(\d{2,3})\s*min", text.lower())
     if match:
         return int(match.group(1))
     return None
+
+
+def _extract_location(text: str) -> str:
+    # Match "near X", "in X", "of X", "to X" where X starts with a capital letter
+    match = re.search(
+        r"(?:near|in|of|to)\s+([A-Z][A-Za-z\s']+?)(?:\s*,|\s+(?:budget|with|and|for|near|max|need|\d)|\s*$)",
+        text,
+    )
+    if match:
+        return match.group(1).strip()
+    # Legacy fallback
+    lowered = text.lower()
+    if "king" in lowered and "cross" in lowered:
+        return "King's Cross"
+    return "unknown"
 
 
 class LlmAdapter(Protocol):
@@ -77,12 +92,8 @@ def _parse_with_regex(text: str) -> BuyerProfile:
         if feature in lowered:
             nice_to_haves.append(feature)
 
-    location_query = "unknown"
-    if "king" in lowered and "cross" in lowered:
-        location_query = "King's Cross commute"
-
     return BuyerProfile(
-        location_query=location_query,
+        location_query=_extract_location(text),
         max_budget=_extract_budget(text),
         min_bedrooms=_extract_bedrooms(text),
         max_commute_minutes=_extract_commute(text),

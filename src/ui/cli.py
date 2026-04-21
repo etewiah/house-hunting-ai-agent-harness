@@ -16,8 +16,7 @@ Describe what you're looking for in plain English.
 Include budget, bedrooms, location or commute, and must-haves.
 
 Example:
-  3-bed house near Manchester Piccadilly, budget £350k,
-  need a garden, max 30 min commute, quiet street preferred
+  3-bed house near Manchester Piccadilly, budget £350k, need a garden, max 30 min commute
 
 """
 
