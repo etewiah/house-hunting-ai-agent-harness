@@ -1,66 +1,128 @@
-# House Hunting Agent Harness
+# House Hunting Agent
 
-Open-source reference harness for buyer-side real estate assistants: modular skills, transparent tools, policy guardrails, and evals for real-world house-hunting workflows.
+Tell it what you want in plain English. Get ranked matches, explanations, an affordability estimate, and a list of questions to ask on the tour.
 
-This is not a magical autonomous house buyer. It is a forkable framework for building credible buyer workflows with explicit skills, transparent sources, human approval boundaries, and repeatable tests.
+```
+Your brief: 3-bed near Manchester Piccadilly, budget £350k, need a garden, max 30 min commute
 
-## What It Does
+Here's what I understood:
+  Location:      Manchester commute
+  Budget:        £350,000
+  Bedrooms:      3+
+  Commute:       30 mins max
+  Must-haves:    garden
 
-- Captures buyer preferences into structured profiles.
-- Ranks mock listings against a buyer brief.
-- Explains why listings match or miss.
-- Compares shortlists side by side.
-- Estimates monthly housing cost.
-- Generates tour questions and offer-prep briefs.
-- Provides guardrails for legal, financial, inspection, and fair-housing-sensitive boundaries.
-- Ships with eval fixtures so changes can be measured.
+Does that look right? [Y/n]:
+```
 
-## Quick Start
+```
+Found 3 matches:
+
+1. Quiet Garden Terrace  [94/100]
+   Walthamstow · £675,000 · 3 bed · 1 bath · 38 min commute
+   + within budget, bedroom requirement, commute requirement, garden, walkable, quiet
+
+Affordability estimate (top match):
+  Deposit:  £101,250
+  Loan:     £573,750
+  Monthly:  ~£3,438/month
+  Note: estimated mortgage payment only; excludes fees, taxes, insurance
+
+Questions to ask on the tour:
+  • What is included in the sale and what is excluded?
+  • Have there been any recent repairs, disputes, or insurance claims?
+  • What is the garden orientation and drainage like after heavy rain?
+```
+
+---
+
+## For buyers: get started in 2 minutes
+
+**Prerequisite:** install [uv](https://docs.astral.sh/uv/getting-started/installation/) (a fast Python package manager).
 
 ```bash
-uv run house-hunt demo
+# clone the repo
+git clone https://github.com/your-org/house-hunting-ai-agent-harness
+cd house-hunting-ai-agent-harness
+
+# run — no setup step needed
+uv run house-hunt
+```
+
+Type your search in plain English when prompted. Include as much or as little as you like:
+
+- `"3-bed in Bristol, budget £400k, need parking and good schools"`
+- `"2-bed flat, max 20 min commute to London Bridge, under £500k"`
+- `"somewhere quiet in Leeds with a garden, 4 beds, around £300k"`
+
+The agent parses your brief, ranks the listings, shows you why each one matched or missed, estimates your monthly mortgage, and gives you tour questions.
+
+> **Note:** listings in this demo are mock data. To search real listings, add a connector — see [Connecting real listings](#connecting-real-listings) below.
+
+---
+
+## What it produces
+
+For each search the agent outputs:
+
+| Output | What it tells you |
+|---|---|
+| Ranked matches | Listings scored against your brief, highest first |
+| Match explanation | Exactly which requirements each listing met or missed |
+| Side-by-side comparison | Beds, baths, price, commute, features in one view |
+| Affordability estimate | Deposit, loan, and estimated monthly payment |
+| Tour questions | Property-specific questions to ask the agent or vendor |
+| Offer brief | Summary to share with your solicitor or broker |
+
+Every figure is labelled as `listing_provided`, `estimated`, `inferred`, or `missing` so you always know what to verify.
+
+---
+
+## For developers: build on it
+
+### Run the tests
+
+```bash
 uv run --extra dev pytest
 ```
 
-## Design
+### Project layout
 
-The harness has three layers:
+```
+src/
+  skills/       intake, ranking, explanation, comparison, affordability, tour prep, offer brief
+  harness/      orchestration, session state, policies, tracing, approvals
+  connectors/   mock API, local CSV, MCP stub, HomesToCompare connector
+  ui/           CLI, web demo stub
+evals/
+  tests/        eval suite
+  datasets/     mock listing fixtures
+```
 
-- `skills/`: small testable capabilities such as intake, ranking, comparison, affordability, tour prep, and offer brief generation.
-- `harness/`: orchestration, state, policies, tracing, approvals, and tool routing.
-- `connectors/`: local CSV/JSONL providers, mock APIs, and optional MCP integration points.
+### Connecting real listings
 
-## Trust Model
+Implement the `search(profile: BuyerProfile) -> list[Listing]` interface in `src/connectors/` and pass it to `HouseHuntOrchestrator`. The mock connector in `src/connectors/mock_listing_api.py` is the reference implementation.
 
-Every factual output should be labeled as one of:
+### Swapping in an LLM for intake
 
-- `listing_provided`
-- `user_provided`
-- `estimated`
-- `inferred`
-- `missing`
+`parse_buyer_brief()` in `src/skills/intake.py` accepts an optional `llm` adapter. Pass any object with a `generate(prompt, model) -> str` method to use an LLM for richer brief parsing instead of regex.
 
-The harness should never present itself as a lawyer, mortgage advisor, surveyor, inspector, or fiduciary buyer's agent.
+### Trust model
 
-## v0.1 Scope
+Every factual output should carry one of these labels:
 
-Included:
+- `listing_provided` — came directly from the listing data
+- `user_provided` — came from the buyer's brief
+- `estimated` — calculated from stated assumptions
+- `inferred` — derived, not directly stated
+- `missing` — not available
 
-- CLI demo
-- Mock listing dataset
-- Buyer preference intake
-- Listing ranking and explanations
-- Home comparison
-- Affordability estimate
-- Tour and offer-prep outputs
-- Basic eval suite
-- MCP connector stub
+The agent will never present itself as a lawyer, mortgage adviser, surveyor, inspector, or fiduciary buyer's agent.
 
-Not included:
+---
 
-- autonomous browsing
-- outbound calling
-- negotiation automation
-- legal or mortgage advice
-- transaction management
+## v0.1 scope
 
+Included: CLI, mock listings, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, eval suite, MCP connector stub.
+
+Not included: live listing feeds, autonomous browsing, outbound calls, negotiation automation, legal or mortgage advice, transaction management.
