@@ -1,0 +1,145 @@
+---
+name: browser-house-hunt
+description: Find property listings with browser/search/API tools, normalize them into Listing-shaped dicts, and run this repo's full house-hunting harness pipeline. Use when a user wants real candidate properties ranked against a buyer brief.
+metadata:
+  tags: house-hunt, browser, listings, ranking, property
+---
+
+# Browser House Hunt
+
+Use this skill when the user wants help finding actual properties to buy or rent and you have browser, search, scraping, API, or page-reading tools available.
+
+This skill treats **web discovery** and **harness evaluation** as separate steps:
+1. collect candidate listings from Rightmove / Zoopla / platform APIs / browser results
+2. normalize each listing into the repo's `Listing` shape
+3. run the harness pipeline using those supplied listings
+4. report ranked matches, explanations, comparison, affordability, and next steps
+
+If browser/search tools are **not** available, tell the user you can still run the harness if they paste listing URLs or listing data.
+
+## Listing schema to normalize into
+
+Each candidate listing should become a JSON object with these fields:
+
+```json
+{
+  "id": "unique-id-or-url-slug",
+  "title": "Listing title",
+  "price": 235000,
+  "bedrooms": 2,
+  "bathrooms": 1,
+  "location": "Birmingham",
+  "commute_minutes": 15,
+  "features": ["parking", "garden"],
+  "description": "Short summary of the listing",
+  "source_url": "https://example.com/listing"
+}
+```
+
+Notes:
+- `price`, `bedrooms`, and `bathrooms` must be integers
+- `commute_minutes` may be `null` if unavailable
+- `features` should be short normalized strings like `parking`, `garden`, `walkable`, `quiet street`
+- keep the `source_url`
+- prefer factual data from the listing page over guessed values
+
+## Workflow
+
+### Step 1 — Capture the buyer brief
+
+Extract the buyer brief from the user message.
+If it is incomplete, ask for:
+- target area or commute destination
+- budget
+- bedroom count
+- key priorities
+
+### Step 2 — Gather candidate listings externally
+
+Use available browser/search/API tools to find relevant listings.
+
+Aim for:
+- 5 to 12 candidate listings
+- multiple sources when possible
+- properties plausibly matching budget, location, and bedroom requirements
+
+Prefer public listing pages or structured API responses. Do not pretend to have visited pages you have not actually inspected.
+
+### Step 3 — Normalize listings into JSON
+
+Write the normalized candidate list to a temporary JSON file in the repo, for example:
+
+```bash
+mkdir -p .tmp
+```
+
+Save a JSON array such as:
+
+```json
+[
+  {
+    "id": "rightmove-123",
+    "title": "Station Quarter Flat",
+    "price": 235000,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "location": "Birmingham",
+    "commute_minutes": 15,
+    "features": ["parking"],
+    "description": "Modern flat near New Street.",
+    "source_url": "https://www.rightmove.co.uk/..."
+  }
+]
+```
+
+### Step 4 — Run the harness pipeline
+
+Run:
+
+```bash
+uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
+  --brief "BRIEF_GOES_HERE" \
+  --listings-file .tmp/listings.json
+```
+
+Optional exports:
+
+```bash
+uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
+  --brief "BRIEF_GOES_HERE" \
+  --listings-file .tmp/listings.json \
+  --export-html .tmp/house-hunt-report.html \
+  --export-csv .tmp/house-hunt-report.csv
+```
+
+### Step 5 — Report back to the user
+
+Summarize:
+- parsed buyer profile
+- ranked listings with score, price, location, key matches, misses, and warnings
+- comparison summary
+- affordability estimate for the top match
+- tour questions
+- offer-prep brief
+- trace path and export paths if generated
+
+## Guardrails
+
+- Do not present outputs as legal, mortgage, survey, inspection, or negotiation advice
+- Make clear when values are missing or estimated
+- Keep source URLs for every listing
+- If commute time was not explicitly retrieved, leave it null rather than inventing it
+- If browser tools are blocked by a site, say so and move on to another source
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| No browser tools available | Ask the user to paste listing URLs or listing details and then run the harness on those |
+| Sparse listing data | Normalize what you have, keep missing fields honest, and proceed |
+| Script says file is invalid | Ensure the file contains a JSON array of listing objects |
+| No good matches after ranking | Tell the user why and suggest relaxing budget, location, or must-haves |
+
+## Files used by this skill
+
+- `./run_house_hunt.py` — helper script that runs the harness on normalized listing JSON
