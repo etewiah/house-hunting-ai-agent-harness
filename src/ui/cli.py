@@ -37,10 +37,15 @@ def _fmt_profile(profile: BuyerProfile) -> str:
 def _fmt_ranked(items: list[RankedListing]) -> str:
     lines = []
     for i, item in enumerate(items, 1):
-        l = item.listing
-        commute = "?" if l.commute_minutes is None else f"{l.commute_minutes} min"
-        lines.append(f"{i}. {l.title}  [{item.score:.0f}/100]")
-        lines.append(f"   {l.location} · £{l.price:,} · {l.bedrooms} bed · {l.bathrooms} bath · {commute} commute")
+        listing = item.listing
+        commute = (
+            "?" if listing.commute_minutes is None else f"{listing.commute_minutes} min"
+        )
+        lines.append(f"{i}. {listing.title}  [{item.score:.0f}/100]")
+        lines.append(
+            f"   {listing.location} · £{listing.price:,} · {listing.bedrooms} bed · "
+            f"{listing.bathrooms} bath · {commute} commute"
+        )
         if item.matched:
             lines.append(f"   + {', '.join(item.matched)}")
         if item.missed:

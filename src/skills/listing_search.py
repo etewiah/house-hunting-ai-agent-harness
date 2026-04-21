@@ -51,7 +51,7 @@ def filter_by_location(
     if city is None:
         return listings, []
 
-    matched = [l for l in listings if city.lower() in l.location.lower()]
+    matched = [listing for listing in listings if city.lower() in listing.location.lower()]
     if matched:
         return matched, []
 

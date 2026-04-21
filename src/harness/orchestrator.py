@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.connectors.mock_listing_api import MockListingApi
-from src.harness.policies import advice_boundary_notice
+from src.harness.policies import advice_boundary_notice, check_output_guardrails
 from src.harness.session_state import SessionState
 from src.harness.tracing import TraceRecorder
 from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, RankedListing
@@ -46,9 +46,9 @@ class HouseHuntOrchestrator:
         located, warnings = filter_by_location(self.state.buyer_profile.location_query, all_listings)
         self.state.triage_warnings = warnings
         candidates = [
-            l for l in located
-            if l.price <= self.state.buyer_profile.max_budget * 1.1
-            and l.bedrooms >= max(1, self.state.buyer_profile.min_bedrooms - 1)
+            listing for listing in located
+            if listing.price <= self.state.buyer_profile.max_budget * 1.1
+            and listing.bedrooms >= max(1, self.state.buyer_profile.min_bedrooms - 1)
         ]
         ranked = rank_listings(self.state.buyer_profile, candidates)[:limit]
         self.state.ranked_listings = ranked
@@ -60,7 +60,15 @@ class HouseHuntOrchestrator:
             explain_ranked_listing(item, profile=self.state.buyer_profile, llm=self.llm)
             for item in self.state.ranked_listings
         ]
+        guardrails = [
+            check_output_guardrails(explanation, require_source_label=True)
+            for explanation in explanations
+        ]
         self.tracer.record("triage.explanations", explanations)
+        self.tracer.record(
+            "guardrails.checked",
+            {"scope": "triage.explanations", "results": guardrails},
+        )
         return explanations
 
     def compare_top(self, count: int = 3) -> str:
@@ -92,6 +100,17 @@ class HouseHuntOrchestrator:
             "tour_questions": questions,
             "offer_brief": offer,
         }
+        self.tracer.record(
+            "guardrails.checked",
+            {
+                "scope": "next_steps",
+                "results": [
+                    check_output_guardrails(result["boundary"], require_boundary_notice=True),
+                    check_output_guardrails(offer, require_boundary_notice=True),
+                    check_output_guardrails("\n".join(questions)),
+                ],
+            },
+        )
         self.tracer.record("next_steps.prepared", result)
         return result
 

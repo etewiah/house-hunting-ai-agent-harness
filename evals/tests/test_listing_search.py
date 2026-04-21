@@ -31,7 +31,7 @@ ALL = LONDON + MANCHESTER + BRISTOL
 ])
 def test_location_filter_returns_correct_city(query, expected_ids):
     results, warnings = filter_by_location(query, ALL)
-    result_ids = [l.id for l in results]
+    result_ids = [listing.id for listing in results]
     if expected_ids:
         assert sorted(result_ids) == sorted(expected_ids)
     else:
@@ -64,7 +64,7 @@ def test_filter_listings_price_and_bedroom_bounds():
         _make_listing("borderline", "Anywhere", price=385_000, bedrooms=3),  # within 110%
     ]
     results = filter_listings(profile, listings)
-    ids = [l.id for l in results]
+    ids = [listing.id for listing in results]
     assert "cheap" in ids
     assert "borderline" in ids
     assert "overbudget" not in ids

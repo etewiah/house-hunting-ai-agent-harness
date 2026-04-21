@@ -1,4 +1,4 @@
-.PHONY: demo test lint
+.PHONY: demo test lint harness-check
 
 demo:
 	python -m src.ui.cli demo
@@ -9,3 +9,5 @@ test:
 lint:
 	ruff check src evals
 
+harness-check:
+	pytest evals/tests/test_guardrails.py evals/tests/test_architecture_boundaries.py

@@ -72,7 +72,7 @@ def rank_listings(brief: str, listings: list[dict]) -> list[dict]:
     Returns listings sorted by score descending, each with matched/missed/warnings.
     """
     profile = parse_buyer_brief(brief)
-    ranked = _rank_listings(profile, [_to_listing(l) for l in listings])
+    ranked = _rank_listings(profile, [_to_listing(listing) for listing in listings])
     return [
         {
             "listing": asdict(r.listing),
@@ -88,7 +88,7 @@ def rank_listings(brief: str, listings: list[dict]) -> list[dict]:
 @mcp.tool()
 def compare_homes(listings: list[dict]) -> str:
     """Generate a side-by-side comparison of up to 5 listings."""
-    return _compare_homes([_to_listing(l) for l in listings])
+    return _compare_homes([_to_listing(listing) for listing in listings])
 
 
 @mcp.tool()

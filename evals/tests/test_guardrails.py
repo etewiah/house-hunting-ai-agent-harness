@@ -1,7 +1,9 @@
 from src.harness.policies import (
+    GuardrailResult,
     advice_boundary_notice,
     check_generated_recommendation_language,
     check_guardrails,
+    check_output_guardrails,
 )
 from src.skills.offer_brief import generate_offer_brief
 from src.connectors.mock_listing_api import MockListingApi
@@ -30,3 +32,26 @@ def test_fair_housing_terms_detected_in_generated_recommendations():
     )
     assert "safe neighbourhood" in violations
     assert "good schools nearby" in violations
+
+
+def test_structured_guardrail_result_passes_for_boundary_output():
+    result = check_output_guardrails(advice_boundary_notice(), require_boundary_notice=True)
+    assert result == GuardrailResult(passed=True)
+
+
+def test_structured_guardrail_result_fails_missing_boundary():
+    result = check_output_guardrails("Speak to a professional.", require_boundary_notice=True)
+    assert not result.passed
+    assert "missing advice boundary notice" in result.violations
+
+
+def test_structured_guardrail_result_requires_source_label():
+    result = check_output_guardrails("Matched: garden.", require_source_label=True)
+    assert not result.passed
+    assert "missing source label" in result.violations
+
+
+def test_structured_guardrail_result_warns_on_sensitive_recommendations():
+    result = check_output_guardrails("This is a family-friendly area.")
+    assert result.passed
+    assert "sensitive recommendation language: family-friendly area" in result.warnings

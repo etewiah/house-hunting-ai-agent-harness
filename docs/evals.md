@@ -22,4 +22,5 @@ The repo should measure behavior from day one.
 - Explanation references only known data
 - No prohibited advice claims
 - Missing fields are called out instead of hallucinated
-
+- Harness control coverage by behaviour and architecture category
+- Guardrail violations and warnings by generated output type

@@ -10,6 +10,7 @@ TraceEventName = Literal[
     "intake.profile_created",
     "triage.ranked_listings",
     "triage.explanations",
+    "guardrails.checked",
     "comparison.summary",
     "comparison.created",
     "next_steps.prepared",
