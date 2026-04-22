@@ -267,8 +267,11 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
       const qualityLine = typeof result.averageQuality === "number"
         ? `Average extraction quality: ${result.averageQuality}/100\n${Array.isArray(result.qualityWarnings) && result.qualityWarnings.length > 0 ? `Quality warnings: ${result.qualityWarnings.join('; ')}\n` : ''}`
         : "";
+      const commuteLine = typeof result.commuteDestination === "string" && result.commuteDestination
+        ? `Commute enrichment: ${result.commuteDestination} via ${typeof result.commuteMode === 'string' ? result.commuteMode : 'transit'}\n`
+        : "";
       return {
-        content: [{ type: "text", text: `${qualityLine}${result.output}\nTrace: ${result.tracePath}` }],
+        content: [{ type: "text", text: `${qualityLine}${commuteLine}${result.output}\nTrace: ${result.tracePath}` }],
         details: result,
         isError: result.isError,
       };
@@ -410,6 +413,7 @@ function formatSmokeSummary(brief: string, result: Record<string, unknown> & { t
     `Parser usage: ${Object.entries(parserCounts).map(([key, value]) => `${key}=${value}`).join(", ") || "none"}`,
     `Average extraction quality: ${averageQuality}/100`,
     ...(typeof result.minQualityScore === 'number' ? [`Minimum quality threshold: ${result.minQualityScore}/100`] : []),
+    ...(typeof result.commuteDestination === 'string' && result.commuteDestination ? [`Commute enrichment: ${result.commuteDestination} via ${typeof result.commuteMode === 'string' ? result.commuteMode : 'transit'}`] : []),
     ...(Array.isArray(result.qualityWarnings) && result.qualityWarnings.length > 0 ? [`Quality warnings: ${result.qualityWarnings.join('; ')}`] : []),
     "",
     "Top extracted listings:",
