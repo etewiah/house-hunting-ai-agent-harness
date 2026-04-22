@@ -42,6 +42,7 @@ const listingSchema = Type.Object({
   features: Type.Array(Type.String()),
   description: Type.String(),
   source_url: Type.String(),
+  external_refs: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 });
 
 const runParams = Type.Object({
@@ -71,6 +72,7 @@ type ListingDict = {
   features: string[];
   description: string;
   source_url: string;
+  external_refs?: Record<string, unknown>;
 };
 
 type PartialListing = Partial<Omit<ListingDict, "commute_minutes">> & {
@@ -191,7 +193,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
       for (const url of params.urls) {
         try {
           const extraction = await extractListing(url, params.commuteMinutesByUrl?.[url] ?? null, signal);
-          listings.push(extraction.listing);
+          listings.push(withExtractionRefs(extraction));
           extracted.push(extraction);
         } catch (error) {
           failed.push({ url, error: error instanceof Error ? error.message : String(error) });
@@ -291,9 +293,9 @@ async function performWebHouseHunt(
     }
   }
 
-  const listings = extracted.map((item) => item.listing);
+  const listings = extracted.map((item) => withExtractionRefs(item));
   const acceptedExtractions = extracted.filter((item) => item.diagnostics.qualityScore >= minQualityScore);
-  const acceptedListings = acceptedExtractions.map((item) => item.listing);
+  const acceptedListings = acceptedExtractions.map((item) => withExtractionRefs(item));
   const filteredOutLowQuality = extracted
     .filter((item) => item.diagnostics.qualityScore < minQualityScore)
     .map((item) => ({
@@ -836,6 +838,18 @@ function safeHostname(rawUrl: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function withExtractionRefs(extraction: ListingExtractionResult): ListingDict {
+  return {
+    ...extraction.listing,
+    external_refs: {
+      ...(extraction.listing.external_refs ?? {}),
+      extraction_diagnostics: extraction.diagnostics,
+      extraction_quality_score: extraction.diagnostics.qualityScore,
+      extraction_parser: extraction.diagnostics.parser,
+    },
+  };
 }
 
 async function runHarness(
