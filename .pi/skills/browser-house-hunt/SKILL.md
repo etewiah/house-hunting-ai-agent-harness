@@ -53,6 +53,7 @@ Notes:
 - `features` should be short normalized strings like `parking`, `garden`, `walkable`, `quiet street`
 - keep the `source_url`
 - prefer factual data from the listing page over guessed values
+- if you have extraction or commute-estimation diagnostics, keep them under `external_refs`
 
 ## Workflow
 
@@ -139,7 +140,7 @@ Summarize:
 - Do not present outputs as legal, mortgage, survey, inspection, or negotiation advice
 - Make clear when values are missing or estimated
 - Keep source URLs for every listing
-- If commute time was not explicitly retrieved, leave it null rather than inventing it
+- If commute time was not explicitly retrieved, leave it null rather than inventing it unless the extension's heuristic commute enrichment is being used and clearly marked as estimated
 - If browser tools are blocked by a site, say so and move on to another source
 
 ## Troubleshooting

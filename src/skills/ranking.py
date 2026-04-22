@@ -23,13 +23,18 @@ def rank_listing(profile: BuyerProfile, listing: Listing) -> RankedListing:
         missed.append("too few bedrooms")
 
     if profile.max_commute_minutes is not None:
+        commute_estimation = listing.external_refs.get("commute_estimation") if listing.external_refs else None
         if listing.commute_minutes is None:
             warnings.append("commute time missing")
         elif listing.commute_minutes <= profile.max_commute_minutes:
             score += 20
             matched.append("commute requirement")
+            if commute_estimation is not None:
+                warnings.append("commute time estimated")
         else:
             missed.append("commute too long")
+            if commute_estimation is not None:
+                warnings.append("commute time estimated")
 
     for feature in profile.must_haves:
         if feature in listing.features:

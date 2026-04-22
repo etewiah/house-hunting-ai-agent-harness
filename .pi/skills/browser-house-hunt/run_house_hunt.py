@@ -39,6 +39,9 @@ def _print_ranked(ranked) -> None:
     for i, item in enumerate(ranked, 1):
         listing = item.listing
         commute = "unknown" if listing.commute_minutes is None else f"{listing.commute_minutes} mins"
+        commute_estimation = listing.external_refs.get("commute_estimation") if listing.external_refs else None
+        if commute_estimation is not None:
+            commute = f"{commute} (estimated)"
         print(f"{i}. {listing.title} [{item.score:.0f}/100]")
         print(
             f"   £{listing.price:,} · {listing.bedrooms} bed · {listing.bathrooms} bath · "
@@ -51,6 +54,19 @@ def _print_ranked(ranked) -> None:
             print(f"   - Missed: {', '.join(item.missed)}")
         if item.warnings:
             print(f"   ! Warnings: {', '.join(item.warnings)}")
+        if commute_estimation and isinstance(commute_estimation, dict):
+            print(
+                "   ~ Commute estimate: "
+                f"to {commute_estimation.get('destination', 'unknown')} via {commute_estimation.get('mode', 'unknown')}"
+            )
+        extraction_quality = listing.external_refs.get("extraction_quality_score") if listing.external_refs else None
+        extraction_parser = listing.external_refs.get("extraction_parser") if listing.external_refs else None
+        if extraction_quality is not None or extraction_parser is not None:
+            print(
+                "   ~ Extraction: "
+                f"quality {extraction_quality if extraction_quality is not None else 'unknown'}/100, "
+                f"parser {extraction_parser if extraction_parser is not None else 'unknown'}"
+            )
         print()
 
 

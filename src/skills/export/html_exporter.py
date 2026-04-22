@@ -84,13 +84,19 @@ def _render_listing(index: int, item) -> str:
     missed = escape(", ".join(item.missed) or "None")
     warnings = escape(", ".join(item.warnings) or "None")
     extraction_quality = ""
+    commute_meta = ""
     if listing.external_refs:
         quality = listing.external_refs.get("extraction_quality_score")
         parser = listing.external_refs.get("extraction_parser")
+        commute_estimation = listing.external_refs.get("commute_estimation")
         if quality is not None or parser is not None:
             quality_text = "unknown" if quality is None else f"{quality}/100"
             parser_text = "unknown" if parser is None else escape(str(parser))
             extraction_quality = f"<p><strong>Extraction:</strong> quality {quality_text} | parser {parser_text}</p>"
+        if isinstance(commute_estimation, dict):
+            destination = escape(str(commute_estimation.get("destination", "unknown")))
+            mode = escape(str(commute_estimation.get("mode", "unknown")))
+            commute_meta = f"<p><strong>Commute:</strong> estimated toward {destination} via {mode}</p>"
     return f"""
       <article class="listing">
         <h3>{index}. {escape(listing.title)} ({item.score:.0f}/100)</h3>
@@ -99,6 +105,7 @@ def _render_listing(index: int, item) -> str:
         <p><strong>Matched:</strong> {matched}</p>
         <p><strong>Missed:</strong> {missed}</p>
         <p><strong>Warnings:</strong> {warnings}</p>
+        {commute_meta}
         {extraction_quality}
         <p><a href="{escape(listing.source_url)}">Source listing</a></p>
       </article>

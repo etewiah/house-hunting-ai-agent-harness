@@ -69,3 +69,25 @@ def test_html_export_renders_extraction_metadata(tmp_path):
     html = output_path.read_text(encoding="utf-8")
     assert "quality 82/100" in html
     assert "parser zoopla" in html
+
+
+def test_html_export_renders_commute_estimation_metadata(tmp_path):
+    output_path = tmp_path / "report.html"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=22,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={"commute_estimation": {"destination": "Birmingham New Street", "mode": "transit"}},
+    )
+    payload = ExportPayload(ranked_listings=[RankedListing(listing=listing, score=87.0, matched=["garden"], missed=[], warnings=[])])
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "estimated toward Birmingham New Street via transit" in html

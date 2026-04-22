@@ -64,6 +64,10 @@ Example prompt to a coding agent:
 The agent retrieves or receives listings; the harness ranks, compares, exports, and
 prepares next steps.
 
+In browser-assisted Pi workflows, extracted listings can also carry extraction-quality
+metadata and heuristic commute estimates so downstream ranking and exports remain honest
+about what was scraped vs estimated.
+
 ---
 
 ## Getting started

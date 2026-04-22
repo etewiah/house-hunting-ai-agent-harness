@@ -77,3 +77,30 @@ def test_missing_commute_generates_warning():
     )
     result = rank_listing(profile, listing)
     assert "commute time missing" in result.warnings
+
+
+def test_estimated_commute_generates_warning():
+    profile = BuyerProfile(
+        location_query="test",
+        max_budget=700000,
+        min_bedrooms=3,
+        max_commute_minutes=45,
+        must_haves=[],
+        nice_to_haves=[],
+    )
+    listing = Listing(
+        id="L1000",
+        title="Estimated commute",
+        price=650000,
+        bedrooms=3,
+        bathrooms=1,
+        location="test",
+        commute_minutes=35,
+        features=[],
+        description="",
+        source_url="https://example.com",
+        external_refs={"commute_estimation": {"destination": "Birmingham New Street", "mode": "transit"}},
+    )
+    result = rank_listing(profile, listing)
+    assert "commute requirement" in result.matched
+    assert "commute time estimated" in result.warnings
