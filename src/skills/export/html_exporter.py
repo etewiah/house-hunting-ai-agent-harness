@@ -14,7 +14,7 @@ def export_html(
     output_path = Path(options.output_path or "house-hunt-report.html")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     listings = payload.ranked_listings[: options.max_listings]
-    html = _render(payload, generated_at)
+    html = _render(payload, generated_at, listings)
     output_path.write_text(html, encoding="utf-8")
     return ExportResult(
         format="html",
@@ -26,7 +26,7 @@ def export_html(
     )
 
 
-def _render(payload: ExportPayload, generated_at: str) -> str:
+def _render(payload: ExportPayload, generated_at: str, listings) -> str:
     profile = payload.buyer_profile
     profile_html = ""
     if profile is not None:
@@ -42,7 +42,7 @@ def _render(payload: ExportPayload, generated_at: str) -> str:
         </section>
         """
 
-    listing_items = "\n".join(_render_listing(index, item) for index, item in enumerate(payload.ranked_listings, 1))
+    listing_items = "\n".join(_render_listing(index, item) for index, item in enumerate(listings, 1))
     return f"""<!doctype html>
 <html lang="en">
 <head>

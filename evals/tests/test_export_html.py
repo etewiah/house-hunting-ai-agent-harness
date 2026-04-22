@@ -91,3 +91,18 @@ def test_html_export_renders_commute_estimation_metadata(tmp_path):
 
     html = output_path.read_text(encoding="utf-8")
     assert "estimated toward Birmingham New Street via transit" in html
+
+
+def test_html_export_caps_max_listings_in_rendered_output(tmp_path):
+    output_path = tmp_path / "report.html"
+    payload = ExportPayload(ranked_listings=[_ranked_listing("First home"), _ranked_listing("Second home")])
+
+    result = ExportOrchestrator().export(
+        payload,
+        ExportOptions(format="html", output_path=str(output_path), max_listings=1),
+    )
+
+    html = output_path.read_text(encoding="utf-8")
+    assert result.listing_count == 1
+    assert "First home" in html
+    assert "Second home" not in html
