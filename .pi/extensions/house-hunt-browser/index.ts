@@ -250,8 +250,11 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         params.exportCsvPath,
         signal,
       );
+      const qualityLine = typeof result.averageQuality === "number"
+        ? `Average extraction quality: ${result.averageQuality}/100\n${Array.isArray(result.qualityWarnings) && result.qualityWarnings.length > 0 ? `Quality warnings: ${result.qualityWarnings.join('; ')}\n` : ''}`
+        : "";
       return {
-        content: [{ type: "text", text: `${result.output}\nTrace: ${result.tracePath}` }],
+        content: [{ type: "text", text: `${qualityLine}${result.output}\nTrace: ${result.tracePath}` }],
         details: result,
         isError: result.isError,
       };
@@ -297,12 +300,30 @@ async function performWebHouseHunt(
   }
 
   const harness = await runHarness(pi, brief, listings, signal, exportHtmlPath, exportCsvPath);
+  const averageQuality = extracted.length > 0
+    ? Math.round(extracted.reduce((sum, item) => sum + item.diagnostics.qualityScore, 0) / extracted.length)
+    : 0;
+  const lowQualityListings = extracted
+    .filter((item) => item.diagnostics.qualityScore < 60)
+    .map((item) => ({
+      title: item.listing.title,
+      source_url: item.listing.source_url,
+      qualityScore: item.diagnostics.qualityScore,
+      warnings: item.diagnostics.warnings,
+    }));
+  const qualityWarnings = [
+    ...(averageQuality < 65 ? [`average extraction quality is low (${averageQuality}/100)`] : []),
+    ...(lowQualityListings.length > 0 ? [`${lowQualityListings.length} listing(s) had low extraction quality`] : []),
+  ];
   const details = {
     output: harness.output,
     searchResults,
     listings,
     extracted,
     failed,
+    averageQuality,
+    lowQualityListings,
+    qualityWarnings,
     ...harness.details,
     isError: harness.isError,
   };
@@ -335,9 +356,10 @@ function formatSmokeSummary(brief: string, result: Record<string, unknown> & { t
     `Failed extractions: ${failed.length}`,
     `Parser usage: ${Object.entries(parserCounts).map(([key, value]) => `${key}=${value}`).join(", ") || "none"}`,
     `Average extraction quality: ${averageQuality}/100`,
+    ...(Array.isArray(result.qualityWarnings) && result.qualityWarnings.length > 0 ? [`Quality warnings: ${result.qualityWarnings.join('; ')}`] : []),
     "",
     "Top extracted listings:",
-    ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser}, quality ${item.diagnostics.qualityScore}/100)`),
+    ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser}, quality ${item.diagnostics.qualityScore}/100${item.diagnostics.warnings.length ? `, warnings: ${item.diagnostics.warnings.join('; ')}` : ''})`),
     ...(failed.length > 0 ? ["", "Failed URLs:", ...failed.slice(0, 5).map((item) => `- ${item.url}: ${item.error}`)] : []),
     "",
     `Trace: ${result.tracePath}`,
