@@ -3,6 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { extractListingFromHtml } from "./extractor-core.mjs";
+import { enrichListingsWithCommute, inferCommuteDestinationFromBrief } from "./commute-core.mjs";
 
 const DEFAULT_SITES = ["rightmove.co.uk", "zoopla.co.uk", "onthemarket.com"] as const;
 const FEATURE_KEYWORDS = [
@@ -57,6 +58,8 @@ const webRunParams = Type.Object({
   maxResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 12, default: 6 })),
   sites: Type.Optional(Type.Array(Type.String({ description: "Domain to include" }))),
   minQualityScore: Type.Optional(Type.Integer({ minimum: 0, maximum: 100, default: 45, description: "Minimum extraction quality score required before sending listings into the harness" })),
+  commuteDestination: Type.Optional(Type.String({ description: "Optional commute destination for estimating commute times before ranking" })),
+  commuteMode: Type.Optional(Type.String({ description: "Optional commute mode: transit, driving, or walking" })),
   exportHtmlPath: Type.Optional(Type.String({ description: "Optional HTML export path" })),
   exportCsvPath: Type.Optional(Type.String({ description: "Optional CSV export path" })),
 });
@@ -112,7 +115,8 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         6,
         [...DEFAULT_SITES],
         45,
-        undefined,
+        inferCommuteDestinationFromBrief(brief) ?? undefined,
+        "transit",
         undefined,
         undefined,
       );
@@ -254,6 +258,8 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         params.maxResults ?? 6,
         params.sites ?? [...DEFAULT_SITES],
         params.minQualityScore ?? 45,
+        params.commuteDestination ?? inferCommuteDestinationFromBrief(params.brief) ?? undefined,
+        params.commuteMode ?? "transit",
         params.exportHtmlPath,
         params.exportCsvPath,
         signal,
@@ -276,6 +282,8 @@ async function performWebHouseHunt(
   maxResults: number,
   sites: string[],
   minQualityScore: number,
+  commuteDestination?: string,
+  commuteMode: string = "transit",
   exportHtmlPath?: string,
   exportCsvPath?: string,
   signal?: AbortSignal,
@@ -293,9 +301,17 @@ async function performWebHouseHunt(
     }
   }
 
-  const listings = extracted.map((item) => withExtractionRefs(item));
+  const listings = enrichListingsWithCommute(
+    extracted.map((item) => withExtractionRefs(item)),
+    commuteDestination,
+    commuteMode,
+  );
   const acceptedExtractions = extracted.filter((item) => item.diagnostics.qualityScore >= minQualityScore);
-  const acceptedListings = acceptedExtractions.map((item) => withExtractionRefs(item));
+  const acceptedListings = enrichListingsWithCommute(
+    acceptedExtractions.map((item) => withExtractionRefs(item)),
+    commuteDestination,
+    commuteMode,
+  );
   const filteredOutLowQuality = extracted
     .filter((item) => item.diagnostics.qualityScore < minQualityScore)
     .map((item) => ({
@@ -306,7 +322,7 @@ async function performWebHouseHunt(
     }));
 
   if (listings.length === 0) {
-    const tracePath = await writeExtensionTrace("web-run-failed", { searchResults, listings, extracted, failed, brief, minQualityScore });
+    const tracePath = await writeExtensionTrace("web-run-failed", { searchResults, listings, extracted, failed, brief, minQualityScore, commuteDestination, commuteMode });
     return {
       output: `Search found ${searchResults.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}`,
       searchResults,
@@ -315,13 +331,15 @@ async function performWebHouseHunt(
       failed,
       filteredOutLowQuality,
       minQualityScore,
+      commuteDestination,
+      commuteMode,
       tracePath,
       isError: true,
     };
   }
 
   if (acceptedListings.length === 0) {
-    const tracePath = await writeExtensionTrace("web-run-quality-filtered", { searchResults, listings, extracted, failed, filteredOutLowQuality, brief, minQualityScore });
+    const tracePath = await writeExtensionTrace("web-run-quality-filtered", { searchResults, listings, extracted, failed, filteredOutLowQuality, brief, minQualityScore, commuteDestination, commuteMode });
     return {
       output: `Extracted ${listings.length} listing(s), but none met the minimum quality threshold of ${minQualityScore}/100.`,
       searchResults,
@@ -330,6 +348,8 @@ async function performWebHouseHunt(
       failed,
       filteredOutLowQuality,
       minQualityScore,
+      commuteDestination,
+      commuteMode,
       tracePath,
       isError: true,
     };
@@ -353,6 +373,8 @@ async function performWebHouseHunt(
     failed,
     averageQuality,
     minQualityScore,
+    commuteDestination,
+    commuteMode,
     lowQualityListings,
     qualityWarnings,
     ...harness.details,
