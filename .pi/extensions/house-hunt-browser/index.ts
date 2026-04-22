@@ -55,6 +55,7 @@ const webRunParams = Type.Object({
   brief: Type.String({ description: "Buyer brief in plain English" }),
   maxResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 12, default: 6 })),
   sites: Type.Optional(Type.Array(Type.String({ description: "Domain to include" }))),
+  minQualityScore: Type.Optional(Type.Integer({ minimum: 0, maximum: 100, default: 45, description: "Minimum extraction quality score required before sending listings into the harness" })),
   exportHtmlPath: Type.Optional(Type.String({ description: "Optional HTML export path" })),
   exportCsvPath: Type.Optional(Type.String({ description: "Optional CSV export path" })),
 });
@@ -82,6 +83,9 @@ type ListingExtractionDiagnostics = {
   fieldSources: Record<string, string>;
   host?: string;
   hadJsonLd: boolean;
+  missingFields: string[];
+  warnings: string[];
+  qualityScore: number;
 };
 
 type ListingExtractionResult = {
@@ -105,6 +109,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         brief,
         6,
         [...DEFAULT_SITES],
+        45,
         undefined,
         undefined,
         undefined,
@@ -246,6 +251,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
         params.brief,
         params.maxResults ?? 6,
         params.sites ?? [...DEFAULT_SITES],
+        params.minQualityScore ?? 45,
         params.exportHtmlPath,
         params.exportCsvPath,
         signal,
@@ -267,61 +273,84 @@ async function performWebHouseHunt(
   brief: string,
   maxResults: number,
   sites: string[],
+  minQualityScore: number,
   exportHtmlPath?: string,
   exportCsvPath?: string,
   signal?: AbortSignal,
 ): Promise<Record<string, unknown> & { output: string; tracePath: string; isError: boolean }> {
   const searchResults = await searchListings(brief, maxResults, sites, signal);
-  const listings: ListingDict[] = [];
   const extracted: ListingExtractionResult[] = [];
   const failed: Array<{ url: string; error: string }> = [];
 
   for (const result of searchResults) {
     try {
       const extraction = await extractListing(result.url, null, signal);
-      listings.push(extraction.listing);
       extracted.push(extraction);
     } catch (error) {
       failed.push({ url: result.url, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  if (listings.length === 0) {
-    const tracePath = await writeExtensionTrace("web-run-failed", { searchResults, listings, extracted, failed, brief });
-    return {
-      output: `Search found ${searchResults.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}`,
-      searchResults,
-      listings,
-      extracted,
-      failed,
-      tracePath,
-      isError: true,
-    };
-  }
-
-  const harness = await runHarness(pi, brief, listings, signal, exportHtmlPath, exportCsvPath);
-  const averageQuality = extracted.length > 0
-    ? Math.round(extracted.reduce((sum, item) => sum + item.diagnostics.qualityScore, 0) / extracted.length)
-    : 0;
-  const lowQualityListings = extracted
-    .filter((item) => item.diagnostics.qualityScore < 60)
+  const listings = extracted.map((item) => item.listing);
+  const acceptedExtractions = extracted.filter((item) => item.diagnostics.qualityScore >= minQualityScore);
+  const acceptedListings = acceptedExtractions.map((item) => item.listing);
+  const filteredOutLowQuality = extracted
+    .filter((item) => item.diagnostics.qualityScore < minQualityScore)
     .map((item) => ({
       title: item.listing.title,
       source_url: item.listing.source_url,
       qualityScore: item.diagnostics.qualityScore,
       warnings: item.diagnostics.warnings,
     }));
+
+  if (listings.length === 0) {
+    const tracePath = await writeExtensionTrace("web-run-failed", { searchResults, listings, extracted, failed, brief, minQualityScore });
+    return {
+      output: `Search found ${searchResults.length} candidate URLs but none could be extracted. Failures: ${JSON.stringify(failed, null, 2)}`,
+      searchResults,
+      listings,
+      extracted,
+      failed,
+      filteredOutLowQuality,
+      minQualityScore,
+      tracePath,
+      isError: true,
+    };
+  }
+
+  if (acceptedListings.length === 0) {
+    const tracePath = await writeExtensionTrace("web-run-quality-filtered", { searchResults, listings, extracted, failed, filteredOutLowQuality, brief, minQualityScore });
+    return {
+      output: `Extracted ${listings.length} listing(s), but none met the minimum quality threshold of ${minQualityScore}/100.`,
+      searchResults,
+      listings,
+      extracted,
+      failed,
+      filteredOutLowQuality,
+      minQualityScore,
+      tracePath,
+      isError: true,
+    };
+  }
+
+  const harness = await runHarness(pi, brief, acceptedListings, signal, exportHtmlPath, exportCsvPath);
+  const averageQuality = extracted.length > 0
+    ? Math.round(extracted.reduce((sum, item) => sum + item.diagnostics.qualityScore, 0) / extracted.length)
+    : 0;
+  const lowQualityListings = filteredOutLowQuality;
   const qualityWarnings = [
     ...(averageQuality < 65 ? [`average extraction quality is low (${averageQuality}/100)`] : []),
-    ...(lowQualityListings.length > 0 ? [`${lowQualityListings.length} listing(s) had low extraction quality`] : []),
+    ...(lowQualityListings.length > 0 ? [`${lowQualityListings.length} listing(s) were filtered out below ${minQualityScore}/100`] : []),
   ];
   const details = {
     output: harness.output,
     searchResults,
     listings,
+    acceptedListings,
     extracted,
     failed,
     averageQuality,
+    minQualityScore,
     lowQualityListings,
     qualityWarnings,
     ...harness.details,
@@ -356,10 +385,14 @@ function formatSmokeSummary(brief: string, result: Record<string, unknown> & { t
     `Failed extractions: ${failed.length}`,
     `Parser usage: ${Object.entries(parserCounts).map(([key, value]) => `${key}=${value}`).join(", ") || "none"}`,
     `Average extraction quality: ${averageQuality}/100`,
+    ...(typeof result.minQualityScore === 'number' ? [`Minimum quality threshold: ${result.minQualityScore}/100`] : []),
     ...(Array.isArray(result.qualityWarnings) && result.qualityWarnings.length > 0 ? [`Quality warnings: ${result.qualityWarnings.join('; ')}`] : []),
     "",
     "Top extracted listings:",
     ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser}, quality ${item.diagnostics.qualityScore}/100${item.diagnostics.warnings.length ? `, warnings: ${item.diagnostics.warnings.join('; ')}` : ''})`),
+    ...(Array.isArray(result.filteredOutLowQuality) && result.filteredOutLowQuality.length > 0
+      ? ["", "Filtered out for low quality:", ...(result.filteredOutLowQuality as Array<{ title: string; source_url: string; qualityScore: number }>).slice(0, 5).map((item) => `- ${item.title} — ${item.source_url} (${item.qualityScore}/100)`)]
+      : []),
     ...(failed.length > 0 ? ["", "Failed URLs:", ...failed.slice(0, 5).map((item) => `- ${item.url}: ${item.error}`)] : []),
     "",
     `Trace: ${result.tracePath}`,
