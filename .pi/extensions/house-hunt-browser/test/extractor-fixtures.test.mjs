@@ -52,5 +52,8 @@ for (const fixtureCase of fixtureManifest) {
     if ('hadJsonLd' in fixtureCase.expected) {
       assert.equal(result.diagnostics.hadJsonLd, fixtureCase.expected.hadJsonLd);
     }
+    if ('minQualityScore' in fixtureCase.expected) {
+      assert.ok(result.diagnostics.qualityScore >= fixtureCase.expected.minQualityScore, `expected quality score >= ${fixtureCase.expected.minQualityScore}, got ${result.diagnostics.qualityScore}`);
+    }
   });
 }

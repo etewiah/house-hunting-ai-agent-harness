@@ -51,3 +51,8 @@ Field provenance is now more precise than before, with sources such as:
 - `canonical_link`
 - `url_input`
 - `title_inference`
+
+Diagnostics also include:
+- `qualityScore` (0-100)
+- `missingFields`
+- `warnings`

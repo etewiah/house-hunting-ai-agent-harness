@@ -60,6 +60,7 @@ This saves the HTML under `test/fixtures/` and prints a suggested manifest entry
 - Extraction now includes site-specific parsers for Rightmove, Zoopla, and OnTheMarket, with generic fallback parsing.
 - Extraction tool details include diagnostics such as parser used, host, whether JSON-LD was present, field source hints, and field-level provenance.
 - Field provenance is now more precise, distinguishing sources like `json_ld`, `meta_description`, `title_tag`, `text_regex`, and `canonical_link`.
+- Diagnostics also include an extraction `qualityScore`, `missingFields`, and human-readable `warnings`.
 - Search, extraction, and harness runs also write JSON trace files under `.tmp/` for debugging.
 - There is now a small fixture-based test suite inspired by `property_web_scraper` under `test/`.
 - Extraction is still heuristic and should be treated as a best-effort normalizer.

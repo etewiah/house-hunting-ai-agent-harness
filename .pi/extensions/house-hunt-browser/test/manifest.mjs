@@ -21,6 +21,7 @@ export const fixtureManifest = [
         bathrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 85,
     },
   },
   {
@@ -45,6 +46,7 @@ export const fixtureManifest = [
         bathrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 85,
     },
   },
   {
@@ -70,6 +72,7 @@ export const fixtureManifest = [
         bathrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 85,
     },
   },
   {
@@ -93,6 +96,7 @@ export const fixtureManifest = [
         bedrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 70,
     },
   },
   {
@@ -117,6 +121,7 @@ export const fixtureManifest = [
         bathrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 85,
     },
   },
   {
@@ -140,6 +145,7 @@ export const fixtureManifest = [
         bedrooms: 'site_specific',
         location: 'site_specific',
       },
+      minQualityScore: 70,
     },
   },
   {
@@ -164,6 +170,7 @@ export const fixtureManifest = [
         bathrooms: 'site_specific',
         location: 'text_regex',
       },
+      minQualityScore: 70,
     },
   },
   {
@@ -189,6 +196,7 @@ export const fixtureManifest = [
         bathrooms: 'text_regex',
         location: 'json_ld'
       },
+      minQualityScore: 75,
     },
   },
   {
@@ -235,6 +243,7 @@ export const fixtureManifest = [
         location: 'text_regex',
         source_url: 'url_input'
       },
+      minQualityScore: 50,
     },
   },
 ];

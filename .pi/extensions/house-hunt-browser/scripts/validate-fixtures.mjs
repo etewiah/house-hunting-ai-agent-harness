@@ -88,6 +88,12 @@ console.log(`Variants: ${formatCounts(byVariant)}`);
 console.log(`Field sources: ${formatNestedCounts(byFieldSource)}`);
 console.log('');
 
+for (const [field, sources] of Object.entries(byFieldSource)) {
+  if (Object.keys(sources).length < 2) {
+    warnings.push(`Low provenance diversity for ${field}: only ${formatCounts(sources)}`);
+  }
+}
+
 if (warnings.length > 0) {
   console.log('Warnings');
   console.log('--------');

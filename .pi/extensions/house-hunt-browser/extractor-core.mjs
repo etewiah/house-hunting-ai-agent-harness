@@ -65,6 +65,19 @@ export function extractListingFromHtml(url, html, commuteMinutes = null) {
     ...normalizeFeatures([pageText]),
   ])).filter(Boolean);
 
+  const listing = {
+    id: siteSpecific.id || createListingId(canonicalUrlChoice.value),
+    title: titleChoice.value,
+    price: priceChoice.value,
+    bedrooms: bedroomsChoice.value,
+    bathrooms: bathroomsChoice.value,
+    location: locationChoice.value,
+    commute_minutes: commuteMinutes,
+    features,
+    description: descriptionChoice.value,
+    source_url: canonicalUrlChoice.value,
+  };
+
   const diagnostics = buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific, {
     title: titleChoice.source,
     description: descriptionChoice.source,
@@ -73,21 +86,10 @@ export function extractListingFromHtml(url, html, commuteMinutes = null) {
     bathrooms: bathroomsChoice.source,
     location: locationChoice.source,
     source_url: canonicalUrlChoice.source,
-  });
+  }, listing);
 
   return {
-    listing: {
-      id: siteSpecific.id || createListingId(canonicalUrlChoice.value),
-      title: titleChoice.value,
-      price: priceChoice.value,
-      bedrooms: bedroomsChoice.value,
-      bathrooms: bathroomsChoice.value,
-      location: locationChoice.value,
-      commute_minutes: commuteMinutes,
-      features,
-      description: descriptionChoice.value,
-      source_url: canonicalUrlChoice.value,
-    },
+    listing,
     diagnostics,
   };
 }
@@ -413,20 +415,62 @@ function coerceInt(value) {
   return undefined;
 }
 
-function buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific, resolvedFieldSources) {
+function buildExtractionDiagnostics(url, jsonLdObjects, siteSpecific, resolvedFieldSources, listing) {
   const sourceHints = [];
   const fieldSources = { ...resolvedFieldSources };
   if (siteSpecific._parser && siteSpecific._parser !== "generic") sourceHints.push(`site:${siteSpecific._parser}`);
   for (const field of ["title", "description", "price", "bedrooms", "bathrooms", "location", "source_url"]) {
     sourceHints.push(`${field}:${fieldSources[field] ?? "unknown"}`);
   }
+
+  const missingFields = [
+    ["title", !listing.title],
+    ["price", !listing.price],
+    ["bedrooms", !listing.bedrooms],
+    ["bathrooms", listing.bathrooms === 0],
+    ["location", !listing.location || listing.location === "unknown"],
+    ["source_url", !listing.source_url],
+  ].filter(([, missing]) => missing).map(([field]) => field);
+
+  const warnings = [];
+  if (fieldSources.source_url === "url_input") warnings.push("source_url fell back to input URL");
+  if (listing.bathrooms === 0) warnings.push("bathroom count missing or inferred as zero");
+  if (!listing.features.length) warnings.push("no normalized features extracted");
+
+  const qualityScore = computeQualityScore(fieldSources, missingFields, listing);
+
   return {
     parser: siteSpecific._parser || "generic",
     sourceHints,
     fieldSources,
     host: safeHostname(url),
     hadJsonLd: jsonLdObjects.length > 0,
+    missingFields,
+    warnings,
+    qualityScore,
   };
+}
+
+function computeQualityScore(fieldSources, missingFields, listing) {
+  const weights = {
+    site_specific: 1,
+    json_ld: 0.9,
+    meta_og_title: 0.75,
+    meta_description: 0.7,
+    title_tag: 0.6,
+    text_regex: 0.55,
+    text_excerpt: 0.45,
+    canonical_link: 0.7,
+    url_input: 0.4,
+    title_inference: 0.35,
+    default: 0,
+  };
+  const coreFields = ["title", "price", "bedrooms", "bathrooms", "location", "source_url"];
+  const scoreFromSources = coreFields.reduce((acc, field) => acc + (weights[fieldSources[field]] ?? 0), 0) / coreFields.length;
+  const featureBonus = Math.min(0.1, (listing.features?.length ?? 0) * 0.025);
+  const missingPenalty = missingFields.length * 0.08;
+  const raw = Math.max(0, Math.min(1, scoreFromSources + featureBonus - missingPenalty));
+  return Math.round(raw * 100);
 }
 
 function safeHostname(rawUrl) {

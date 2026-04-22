@@ -163,7 +163,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
       const extraction = await extractListing(params.url, params.commuteMinutes ?? null, signal);
       const tracePath = await writeExtensionTrace("extract", extraction);
       return {
-        content: [{ type: "text", text: `${JSON.stringify(extraction.listing, null, 2)}\n\nDiagnostics: ${JSON.stringify(extraction.diagnostics, null, 2)}\n\nTrace: ${tracePath}` }],
+        content: [{ type: "text", text: `${JSON.stringify(extraction.listing, null, 2)}\n\nQuality: ${extraction.diagnostics.qualityScore}/100\nMissing: ${extraction.diagnostics.missingFields.join(', ') || 'none'}\nWarnings: ${extraction.diagnostics.warnings.join('; ') || 'none'}\nDiagnostics: ${JSON.stringify(extraction.diagnostics, null, 2)}\n\nTrace: ${tracePath}` }],
         details: { ...extraction, tracePath },
       };
     },
@@ -322,6 +322,9 @@ function formatSmokeSummary(brief: string, result: Record<string, unknown> & { t
     acc[item.diagnostics.parser] = (acc[item.diagnostics.parser] ?? 0) + 1;
     return acc;
   }, {});
+  const averageQuality = extracted.length > 0
+    ? Math.round(extracted.reduce((sum, item) => sum + item.diagnostics.qualityScore, 0) / extracted.length)
+    : 0;
 
   return [
     "# House Hunt Smoke Test",
@@ -331,9 +334,10 @@ function formatSmokeSummary(brief: string, result: Record<string, unknown> & { t
     `Extracted listings: ${extracted.length}`,
     `Failed extractions: ${failed.length}`,
     `Parser usage: ${Object.entries(parserCounts).map(([key, value]) => `${key}=${value}`).join(", ") || "none"}`,
+    `Average extraction quality: ${averageQuality}/100`,
     "",
     "Top extracted listings:",
-    ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser})`),
+    ...extracted.slice(0, 5).map((item, index) => `${index + 1}. ${item.listing.title} — ${item.listing.source_url} (${item.diagnostics.parser}, quality ${item.diagnostics.qualityScore}/100)`),
     ...(failed.length > 0 ? ["", "Failed URLs:", ...failed.slice(0, 5).map((item) => `- ${item.url}: ${item.error}`)] : []),
     "",
     `Trace: ${result.tracePath}`,
