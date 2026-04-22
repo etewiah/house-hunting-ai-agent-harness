@@ -83,6 +83,14 @@ def _render_listing(index: int, item) -> str:
     matched = escape(", ".join(item.matched) or "None")
     missed = escape(", ".join(item.missed) or "None")
     warnings = escape(", ".join(item.warnings) or "None")
+    extraction_quality = ""
+    if listing.external_refs:
+        quality = listing.external_refs.get("extraction_quality_score")
+        parser = listing.external_refs.get("extraction_parser")
+        if quality is not None or parser is not None:
+            quality_text = "unknown" if quality is None else f"{quality}/100"
+            parser_text = "unknown" if parser is None else escape(str(parser))
+            extraction_quality = f"<p><strong>Extraction:</strong> quality {quality_text} | parser {parser_text}</p>"
     return f"""
       <article class="listing">
         <h3>{index}. {escape(listing.title)} ({item.score:.0f}/100)</h3>
@@ -91,6 +99,7 @@ def _render_listing(index: int, item) -> str:
         <p><strong>Matched:</strong> {matched}</p>
         <p><strong>Missed:</strong> {missed}</p>
         <p><strong>Warnings:</strong> {warnings}</p>
+        {extraction_quality}
         <p><a href="{escape(listing.source_url)}">Source listing</a></p>
       </article>
     """

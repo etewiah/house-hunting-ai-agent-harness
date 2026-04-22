@@ -17,6 +17,8 @@ REQUIRED_COLUMNS = [
     "matched_features",
     "missed_features",
     "warnings",
+    "extraction_quality_score",
+    "extraction_parser",
     "source_url",
 ]
 
@@ -49,6 +51,8 @@ def _rows(ranked_listings: list[RankedListing]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for index, item in enumerate(ranked_listings, 1):
         listing = item.listing
+        extraction_quality = listing.external_refs.get("extraction_quality_score") if listing.external_refs else None
+        extraction_parser = listing.external_refs.get("extraction_parser") if listing.external_refs else None
         rows.append(
             {
                 "rank": index,
@@ -62,6 +66,8 @@ def _rows(ranked_listings: list[RankedListing]) -> list[dict[str, object]]:
                 "matched_features": ";".join(item.matched),
                 "missed_features": ";".join(item.missed),
                 "warnings": ";".join(item.warnings),
+                "extraction_quality_score": "" if extraction_quality is None else extraction_quality,
+                "extraction_parser": "" if extraction_parser is None else extraction_parser,
                 "source_url": listing.source_url,
             }
         )

@@ -85,3 +85,30 @@ def test_csv_export_warns_when_profile_context_present(tmp_path):
     )
 
     assert result.warnings
+
+
+def test_csv_export_includes_extraction_metadata_columns(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=30,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={"extraction_quality_score": 82, "extraction_parser": "zoopla"},
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=87.25, matched=["garden"], missed=[], warnings=[])],
+    )
+    ExportOrchestrator().export(payload, ExportOptions(format="csv", output_path=str(output_path)))
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["extraction_quality_score"] == "82"
+    assert row["extraction_parser"] == "zoopla"
