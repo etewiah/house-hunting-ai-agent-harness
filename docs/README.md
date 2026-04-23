@@ -53,12 +53,15 @@ If you are trying to understand the project quickly, read these first:
 
 - `claude-code-parity-plan.md`
   - complete roadmap for bringing Claude Code to feature parity with Pi
-  - three tiers: wiring (Tier 1, complete), extraction quality (Tier 2), polish (Tier 3)
+  - three tiers: wiring (Tier 1 ✅), extraction quality (Tier 2 ✅), polish (Tier 3 ✅)
   - detailed acceptance criteria, risks, and rollout plan
 - `../.claude/skills/browser-house-hunt/SKILL.md`
-  - Claude Code skill for browser-assisted house hunting (Tier 1)
+  - Claude Code skill for browser-assisted house hunting
+  - prefer the Tier 2 MCP tools for extraction with quality scoring
 - `../.claude/commands/house-hunt-smoke.md`
-  - slash command to smoke-test the browser-assisted flow (Tier 1)
+  - slash command to smoke-test the browser-assisted flow
+- `../.claude/agents/listing-extractor.md`
+  - subagent for batch extraction of 3+ property URLs with diagnostics (Tier 3)
 
 ## Which doc should I read?
 

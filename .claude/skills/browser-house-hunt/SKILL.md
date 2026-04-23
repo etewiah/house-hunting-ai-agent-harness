@@ -26,12 +26,15 @@ Prefer, in this order:
 2. **`rank_listings` + `compare_homes` + `estimate_affordability` + `offer_brief` (MCP)** — when you need more granular control over the pipeline steps
 3. **The existing `run-house-hunt` skill** — fallback when MCP is unavailable or when no web discovery is needed
 
-For web discovery, prefer in this order:
+For web discovery and extraction, prefer in this order:
 
-1. **`WebSearch`** for candidate listing URLs (fast, broad coverage)
-2. **`WebFetch`** to fetch and read individual listing pages (reliable for most sites)
-3. **`claude-in-chrome` `navigate` + `read_page`** when a site blocks WebFetch or requires JavaScript
-4. **Ask the user for listing URLs or data** if web tools are unavailable or blocked
+1. **`house_hunt_from_web` (MCP)** — end-to-end: search → extract with site-specific parsers → enrich commute → filter by quality (Tier 2, recommended)
+2. **`property_web_search` + `extract_property_listings` (MCP)** — granular control: discover with DuckDuckGo, extract with quality diagnostics (Tier 2)
+3. **`WebSearch` + `WebFetch`** — basic path: search with built-in tools, generic extraction (Tier 1)
+4. **`claude-in-chrome` `navigate` + `read_page`** when a site blocks WebFetch or requires JavaScript
+5. **Ask the user for listing URLs or data** if web tools are unavailable or blocked
+
+For batches of 3+ URLs, delegate to the **`listing-extractor` subagent** which processes them in parallel and returns diagnostics.
 
 ## Listing schema to normalize into
 
