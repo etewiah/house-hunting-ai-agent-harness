@@ -45,6 +45,7 @@ setup.
 
 For agent-facing instructions, see [AGENTS.md](AGENTS.md).
 For Codex skill discovery, see [.codex/skills/run-house-hunt/SKILL.md](.codex/skills/run-house-hunt/SKILL.md).
+For a consolidated browser-first progress + usage guide, see [docs/browser-assisted-guide.md](docs/browser-assisted-guide.md).
 
 Useful direct entry points:
 
