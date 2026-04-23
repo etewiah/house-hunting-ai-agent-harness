@@ -48,6 +48,15 @@ For Codex skill discovery, see [.codex/skills/run-house-hunt/SKILL.md](.codex/sk
 For a consolidated browser-first progress + usage guide, see [docs/browser-assisted-guide.md](docs/browser-assisted-guide.md).
 For a chronological browser-first change log, see [docs/browser-assisted-changelog.md](docs/browser-assisted-changelog.md).
 
+## Documentation
+
+Key docs:
+- `docs/README.md` — documentation map
+- `docs/browser-assisted-guide.md` — browser-first and Pi usage guide
+- `docs/browser-assisted-changelog.md` — chronological change log
+- `.pi/extensions/house-hunt-browser/README.md` — Pi extension details
+- `.pi/skills/browser-house-hunt/SKILL.md` — Pi skill instructions
+
 ## Using With Pi
 
 This repo now has a project-local Pi skill and Pi extension for browser-assisted house hunting.

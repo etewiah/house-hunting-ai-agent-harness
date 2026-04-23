@@ -2,13 +2,18 @@
 
 The repo should measure behavior from day one.
 
-## Initial Evals
+## Current Eval Coverage
 
 - Ranking quality
 - Explanation fidelity
 - Missing-data handling
 - Guardrail compliance
 - Cost-estimate sanity
+- Browser-supplied listing normalization
+- Browser-mode orchestrator behavior
+- Export metadata rendering
+- MCP browser-first workflow behavior
+- Pi extension extraction fixtures and validation
 
 ## Dataset Files
 

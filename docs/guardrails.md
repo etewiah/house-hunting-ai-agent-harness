@@ -12,7 +12,7 @@ The harness must not represent itself as:
 
 Outputs should use clear boundaries such as:
 
-> This is a preparation aid, not legal, mortgage, survey, inspection, or fiduciary advice.
+> This is a preparation aid, not legal, mortgage, survey, inspection, fiduciary, or negotiation advice.
 
 ## Fair Housing Caution
 
@@ -27,6 +27,11 @@ Every claim should be labeled:
 - `estimated`
 - `inferred`
 - `missing`
+
+This is especially important in browser-assisted flows where some values may be:
+- scraped from listing pages
+- inferred from page structure
+- estimated heuristically, such as commute enrichment
 
 ## Approval Gates
 

@@ -44,11 +44,19 @@ Connectors hide external systems:
 
 1. Capture buyer preferences.
 2. Load candidate listings.
+   - from a configured provider, or
+   - from browser/agent-supplied listing data
 3. Rank listings with transparent scoring.
 4. Explain matches and missing information.
 5. Compare selected homes.
 6. Generate tour or offer-prep outputs.
 7. Trace every step.
+
+In browser-first workflows, an external agent or the project-local Pi extension may also:
+- search for listing URLs
+- extract listing pages into normalized listing data
+- attach extraction diagnostics and quality metadata
+- heuristically enrich commute data before ranking
 
 ## Agent Access
 
