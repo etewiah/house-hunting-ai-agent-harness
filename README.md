@@ -67,6 +67,7 @@ When you run Pi inside this repo, it can:
 Start Pi in this repo, then run:
 
 ```text
+pi
 /reload
 /skill:browser-house-hunt
 ```
@@ -89,6 +90,7 @@ Pi-specific docs:
 - `.pi/extensions/house-hunt-browser/README.md`
 - `.pi/skills/browser-house-hunt/SKILL.md`
 - `docs/browser-assisted-guide.md`
+- `docs/browser-assisted-changelog.md`
 
 Useful direct entry points:
 

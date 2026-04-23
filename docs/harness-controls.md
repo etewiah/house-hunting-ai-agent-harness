@@ -14,7 +14,7 @@ controls below make that boundary explicit.
 | `evals/tests/test_guardrails.py` | Feedback sensor | Computational | Behaviour | Local and CI |
 | `evals/tests/test_architecture_boundaries.py` | Feedback sensor | Computational | Architecture fitness | Local and CI |
 | `evals/tests/test_ranking.py` | Feedback sensor | Computational | Behaviour | Local and CI |
-| `evals/tests/test_explanations.py` | Feedback sensor | Computational | Behaviour | Local and CI |
+| `evals/tests/test_explanation.py` | Feedback sensor | Computational | Behaviour | Local and CI |
 | `src/harness/tracing.py` | Feedback sensor | Computational | Behaviour and operability | Runtime |
 
 ## Behaviour Harness

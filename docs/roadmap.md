@@ -1,27 +1,49 @@
 # Roadmap
 
-## v0.1
+This roadmap reflects the current state of the project more accurately than the original
+v0.1 sketch. For browser-first usage details, see:
+- `docs/browser-assisted-guide.md`
+- `docs/browser-assisted-changelog.md`
 
-- CLI search
-- Provider-backed listing search
+## Implemented now
+
+### Core harness
+- CLI workflow
+- Optional provider-backed listing search
+- Browser-supplied / user-supplied listing support
 - Preference intake
 - Listing ranking and explanations
-- Comparison workspace
+- Comparison summary
 - Affordability estimate
 - Tour prep and offer brief
-- Basic evals
+- CSV and HTML export
+- Eval suite
+- Optional MCP server
 
-## v0.2
+### Browser-first / Pi workflow
+- project-local Pi skill
+- project-local Pi extension
+- web search for listing URLs
+- listing extraction and normalization
+- extraction diagnostics and quality scoring
+- quality filtering before ranking
+- heuristic commute enrichment
+- browser-first Python runner script
+- browser-first MCP workflow tool
 
-- Web search UI
-- Better trace viewer
-- Optional MCP connector example
-- Market watch scheduler
-- More policy evals
+## Near-term priorities
+
+- real captured fixtures for portal extraction, not just synthetic fixtures
+- more portal-specific extraction hardening, especially fallback-heavy cases
+- clearer trace inspection / trace viewer tooling
+- richer export surfacing for extraction provenance and confidence
+- more browser-assisted smoke testing against live pages
 
 ## Later
 
-- Provider-specific listing connectors
-- Calendar integrations
-- Notification adapters
-- Human handoff workflows
+- non-heuristic commute or travel-time provider integration
+- provider-specific listing connectors beyond the current set
+- market watch / saved-search scheduling
+- calendar integrations
+- notification adapters
+- human handoff workflows
