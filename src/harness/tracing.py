@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 TraceEventName = Literal[
+    "pipeline.status",
     "intake.profile_created",
     "triage.ranked_listings",
     "triage.explanations",

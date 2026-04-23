@@ -70,6 +70,25 @@ def _print_ranked(ranked) -> None:
         print()
 
 
+def _print_pipeline_summary(status: dict[str, object]) -> None:
+    print("## Pipeline Status")
+    history = status.get("history")
+    if not isinstance(history, list) or not history:
+        print("No stage updates recorded.")
+        print()
+        return
+    for event in history:
+        if not isinstance(event, dict):
+            continue
+        stage = event.get("stage", "unknown")
+        message = event.get("message", "")
+        print(f"- {stage}: {message}")
+        metrics = event.get("metrics")
+        if isinstance(metrics, dict) and metrics:
+            print(f"  metrics: {json.dumps(metrics, sort_keys=True)}")
+    print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the house-hunt harness on supplied listing JSON.")
     parser.add_argument("--brief", required=True, help="Buyer brief in plain English.")
@@ -106,6 +125,8 @@ def main() -> None:
     print("## Comparison")
     print(comparison)
     print()
+
+    _print_pipeline_summary(app.get_pipeline_status())
 
     if next_steps is not None:
         affordability = next_steps["affordability"]

@@ -11,3 +11,12 @@ class SessionState:
     triage_warnings: list[str] = field(default_factory=list)
     approvals: list[str] = field(default_factory=list)
     session: Session | None = None
+    pipeline_status: dict[str, object] = field(
+        default_factory=lambda: {
+            "current_stage": "idle",
+            "message": "Ready",
+            "updated_at": None,
+            "metrics": {},
+            "history": [],
+        }
+    )

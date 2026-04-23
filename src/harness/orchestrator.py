@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from src.harness.policies import advice_boundary_notice, check_output_guardrails
 from src.harness.session_state import SessionState
 from src.harness.tracing import TraceRecorder
@@ -32,16 +34,54 @@ class HouseHuntOrchestrator:
         self.tracer = TraceRecorder(trace_dir)
         self.exporter = ExportOrchestrator()
 
+    def _set_pipeline_stage(self, stage: str, message: str, **metrics: object) -> None:
+        status = self.state.pipeline_status
+        event = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "stage": stage,
+            "message": message,
+            "metrics": metrics,
+        }
+        history = status.get("history")
+        if isinstance(history, list):
+            history.append(event)
+        status["current_stage"] = stage
+        status["message"] = message
+        status["updated_at"] = event["at"]
+        status["metrics"] = metrics
+        self.tracer.record("pipeline.status", event)
+
+    def get_pipeline_status(self) -> dict[str, object]:
+        status = self.state.pipeline_status
+        history = status.get("history")
+        return {
+            "current_stage": status.get("current_stage"),
+            "message": status.get("message"),
+            "updated_at": status.get("updated_at"),
+            "metrics": dict(status.get("metrics") or {}),
+            "history": list(history) if isinstance(history, list) else [],
+        }
+
     def intake(self, brief: str) -> BuyerProfile:
+        self._set_pipeline_stage("intake.started", "Parsing buyer brief")
         profile = parse_buyer_brief(brief, llm=self.llm)
         self.state.buyer_profile = profile
         self.tracer.record("intake.profile_created", profile)
+        self._set_pipeline_stage(
+            "intake.completed",
+            "Buyer profile captured",
+            has_commute_limit=profile.max_commute_minutes is not None,
+            must_haves=len(profile.must_haves),
+        )
         return profile
 
     def triage(self, limit: int = 5) -> list[RankedListing]:
+        self._set_pipeline_stage("triage.started", "Searching and ranking listings", limit=limit)
         if self.state.buyer_profile is None:
+            self._set_pipeline_stage("triage.failed", "Cannot rank before intake")
             raise ValueError("Cannot triage listings before preference intake.")
         if self.listings is None:
+            self._set_pipeline_stage("triage.failed", "No listing provider configured")
             raise ValueError(
                 "No listing provider configured. In browser-assisted or coding-agent workflows, "
                 "gather listings externally and call triage_listings(candidates)."
@@ -50,7 +90,14 @@ class HouseHuntOrchestrator:
         return self.triage_listings(candidates, limit=limit)
 
     def triage_listings(self, candidates: list[Listing], limit: int = 5) -> list[RankedListing]:
+        self._set_pipeline_stage(
+            "triage.candidates_received",
+            "Ranking supplied candidate listings",
+            candidate_count=len(candidates),
+            limit=limit,
+        )
         if self.state.buyer_profile is None:
+            self._set_pipeline_stage("triage.failed", "Cannot rank before intake")
             raise ValueError("Cannot triage listings before preference intake.")
         located, location_warnings = filter_by_location(self.state.buyer_profile.location_query, candidates)
         filtered = filter_listings(self.state.buyer_profile, located)
@@ -61,12 +108,30 @@ class HouseHuntOrchestrator:
             "triage.ranked_listings",
             {"warnings": location_warnings, "count": len(ranked), "items": ranked},
         )
+        self._set_pipeline_stage(
+            "triage.completed",
+            "Ranked listings ready",
+            located_count=len(located),
+            filtered_count=len(filtered),
+            ranked_count=len(ranked),
+            warning_count=len(location_warnings),
+        )
         return ranked
 
     def triage_listing_dicts(self, candidates: list[dict[str, object]], limit: int = 5) -> list[RankedListing]:
+        self._set_pipeline_stage(
+            "triage.normalizing_input",
+            "Normalizing listing dictionaries",
+            candidate_count=len(candidates),
+        )
         return self.triage_listings([listing_from_dict(candidate) for candidate in candidates], limit=limit)
 
     def explain_top_matches(self) -> list[str]:
+        self._set_pipeline_stage(
+            "explanations.started",
+            "Generating explanation summaries",
+            listing_count=len(self.state.ranked_listings),
+        )
         explanations = [
             explain_ranked_listing(item, profile=self.state.buyer_profile, llm=self.llm)
             for item in self.state.ranked_listings
@@ -80,12 +145,20 @@ class HouseHuntOrchestrator:
             "guardrails.checked",
             {"scope": "triage.explanations", "results": guardrails},
         )
+        self._set_pipeline_stage(
+            "explanations.completed",
+            "Explanations generated",
+            explanation_count=len(explanations),
+            guardrails_checked=len(guardrails),
+        )
         return explanations
 
     def compare_top(self, count: int = 3) -> str:
+        self._set_pipeline_stage("comparison.started", "Building side-by-side comparison", count=count)
         listings = [item.listing for item in self.state.ranked_listings[:count]]
         output = compare_homes(listings)
         self.tracer.record("comparison.summary", output)
+        self._set_pipeline_stage("comparison.completed", "Comparison ready", compared_count=len(listings))
         return output
 
     def create_comparison(self, count: int = 2) -> dict[str, object]:
@@ -99,7 +172,9 @@ class HouseHuntOrchestrator:
         return result
 
     def prep_next_steps(self) -> dict[str, object]:
+        self._set_pipeline_stage("next_steps.started", "Preparing affordability and tour guidance")
         if not self.state.ranked_listings:
+            self._set_pipeline_stage("next_steps.failed", "No ranked listings available")
             raise ValueError("Cannot prep next steps before ranking listings.")
         top = self.state.ranked_listings[0].listing
         affordability = estimate_monthly_payment(top)
@@ -123,9 +198,15 @@ class HouseHuntOrchestrator:
             },
         )
         self.tracer.record("next_steps.prepared", result)
+        self._set_pipeline_stage(
+            "next_steps.completed",
+            "Next-step guidance ready",
+            tour_question_count=len(questions),
+        )
         return result
 
     def export(self, options: ExportOptions) -> ExportResult:
+        self._set_pipeline_stage("export.started", "Exporting report", format=options.format)
         payload = ExportPayload(
             buyer_profile=self.state.buyer_profile,
             ranked_listings=self.state.ranked_listings,
@@ -134,4 +215,10 @@ class HouseHuntOrchestrator:
         )
         result = self.exporter.export(payload, options)
         self.tracer.record("export.created", result)
+        self._set_pipeline_stage(
+            "export.completed",
+            "Export completed",
+            format=options.format,
+            listing_count=result.listing_count,
+        )
         return result

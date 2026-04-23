@@ -62,6 +62,25 @@ def _fmt_affordability(est: AffordabilityEstimate) -> str:
     ])
 
 
+def _print_pipeline_summary(status: dict[str, object]) -> None:
+    print("Pipeline status summary:\n")
+    history = status.get("history")
+    if not isinstance(history, list) or not history:
+        print("  (no stage updates recorded)\n")
+        return
+    for event in history:
+        if not isinstance(event, dict):
+            continue
+        stage = event.get("stage", "unknown")
+        message = event.get("message", "")
+        print(f"  - {stage}: {message}")
+        metrics = event.get("metrics")
+        if isinstance(metrics, dict) and metrics:
+            rendered_metrics = ", ".join([f"{k}={v}" for k, v in metrics.items()])
+            print(f"    ({rendered_metrics})")
+    print()
+
+
 def run_interactive() -> None:
     print(_WELCOME)
 
@@ -144,6 +163,8 @@ def run_interactive() -> None:
         print(f"  • {q}")
 
     print(f"\n{next_steps['boundary']}\n")
+
+    _print_pipeline_summary(app.get_pipeline_status())
 
     trace_path = app.tracer.flush("session")
     print(f"Session trace saved to {trace_path}")

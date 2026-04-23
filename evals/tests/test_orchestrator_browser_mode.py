@@ -127,3 +127,35 @@ def test_orchestrator_can_rank_browser_supplied_listing_dicts(tmp_path):
 
     assert [item.listing.id for item in ranked][0] == "best"
     assert [item.listing.id for item in ranked] == ["best", "small"]
+
+
+def test_pipeline_status_tracks_stage_history_for_browser_supplied_listings(tmp_path):
+    app = HouseHuntOrchestrator(listings=None, trace_dir=str(tmp_path))
+    app.intake("2-bed flat near Birmingham New Street, under £250k, parking preferred")
+
+    app.triage_listing_dicts(
+        [
+            {
+                "id": "best",
+                "title": "Station Quarter Flat",
+                "price": 235_000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 15,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/best",
+            }
+        ]
+    )
+
+    status = app.get_pipeline_status()
+
+    assert status["current_stage"] == "triage.completed"
+    history = status["history"]
+    assert isinstance(history, list)
+    assert any(item.get("stage") == "intake.completed" for item in history if isinstance(item, dict))
+    final_event = history[-1]
+    assert final_event["stage"] == "triage.completed"
+    assert final_event["metrics"]["ranked_count"] == 1
