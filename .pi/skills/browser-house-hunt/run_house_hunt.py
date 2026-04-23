@@ -130,6 +130,27 @@ def _print_area_context_summary(summary: dict[str, object]) -> None:
     print()
 
 
+def _print_area_evidence_rollup(rollup: dict[str, object]) -> None:
+    print("## Area Evidence Rollup")
+    if not rollup:
+        print("No area evidence rollup available.")
+        print()
+        return
+    print(f"- listings considered: {rollup.get('listing_count_considered', 0)}")
+    print(f"- listings with area context: {rollup.get('listings_with_area_context', 0)}")
+    print(f"- total evidence items: {rollup.get('total_evidence_items', 0)}")
+    print(f"- total area warnings: {rollup.get('total_area_warnings', 0)}")
+    by_source = rollup.get("evidence_by_source")
+    if isinstance(by_source, dict) and by_source:
+        rendered = ", ".join([f"{key}={value}" for key, value in sorted(by_source.items())])
+        print(f"- by source: {rendered}")
+    top_categories = rollup.get("top_categories")
+    if isinstance(top_categories, dict) and top_categories:
+        rendered = ", ".join([f"{key}={value}" for key, value in top_categories.items()])
+        print(f"- top categories: {rendered}")
+    print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the house-hunt harness on supplied listing JSON.")
     parser.add_argument("--brief", required=True, help="Buyer brief in plain English.")
@@ -169,6 +190,7 @@ def main() -> None:
 
     _print_acquisition_summary(app.get_acquisition_summary())
     _print_area_context_summary(app.get_area_context_summary())
+    _print_area_evidence_rollup(app.get_area_evidence_rollup())
     _print_pipeline_summary(app.get_pipeline_status())
 
     if next_steps is not None:
