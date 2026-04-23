@@ -164,6 +164,23 @@ This helps distinguish:
 - extracted values
 - heuristic estimates
 
+## Area evidence rollups and confidence bands
+
+When area evidence is present in ranked listings, the harness now aggregates it into a compact rollup used across MCP, exports, and interactive output summaries.
+
+Rollup fields include:
+- listing coverage counts
+- evidence totals
+- warnings totals
+- source-label breakdowns (`listing_provided`, `estimated`, `inferred`, `missing`)
+- top evidence categories
+- `confidence_band` and `confidence_reason`
+
+`confidence_band` guidance:
+- `high`: strong area-evidence coverage across ranked homes
+- `medium`: partial but useful area-evidence coverage
+- `low`: sparse coverage or mostly estimated context; collect more data before final decisions
+
 ## Input normalization hardening
 
 The project now tolerates messier browser-supplied payloads.
@@ -192,10 +209,14 @@ This means agents no longer need to perfectly sanitize every field first.
 - commute estimated flag
 - commute destination
 - commute mode
+- area evidence counts and top categories
+- area rollup confidence warning in export metadata
 
 ### HTML export now includes
 - extraction metadata
 - commute estimation metadata
+- area context snippets per listing
+- area evidence rollup with confidence band and reason
 - the shared boundary/advice notice
 - correct `max_listings` enforcement
 
@@ -219,6 +240,9 @@ MCP server location:
 
 `run_house_hunt(brief, listings, limit=5)` now returns:
 - buyer profile
+- acquisition summary
+- area context summary
+- area evidence rollup
 - triage warnings
 - ranked listings
 - explanations

@@ -63,11 +63,40 @@ If you want the simplest browser-first workflow, use:
 
 This is the highest-level MCP tool and returns a structured result containing:
 - `buyer_profile`
+- `acquisition_summary`
+- `area_context_summary`
+- `area_evidence_rollup`
 - `triage_warnings`
 - `ranked_listings`
 - `explanations`
 - `comparison`
 - `next_steps`
+
+### Area evidence confidence fields
+
+`area_evidence_rollup` includes trust-scanning fields that summarize how complete area evidence is for the ranked set:
+
+- `listing_count_considered`
+- `listings_with_area_context`
+- `total_evidence_items`
+- `total_area_warnings`
+- `evidence_by_source`
+- `top_categories`
+- `coverage_ratio`
+- `estimated_ratio`
+- `confidence_band`
+- `confidence_reason`
+
+Interpret `confidence_band` as:
+
+- `high`: broad listing coverage with multi-item evidence and lower estimated-only share
+- `medium`: useful but partial evidence coverage
+- `low`: sparse or mostly estimated evidence, or no area evidence
+
+Use this as a routing signal:
+
+- high/medium: continue with comparison and tour prep
+- low: gather more area evidence before finalizing a shortlist
 
 Use this when you already have listings from:
 - browser tools
