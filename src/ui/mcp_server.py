@@ -18,8 +18,8 @@ from src.models.schemas import Listing
 from src.models.schemas import ExportOptions, ExportPayload, RankedListing
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.browser_extraction import (
-    property_web_search,
-    property_listing_extract,
+    property_web_search as _property_web_search,
+    property_listing_extract as _property_listing_extract,
     extract_property_listings as _extract_property_listings,
     house_hunt_from_web as _house_hunt_from_web,
     ExtractionError,
@@ -198,7 +198,7 @@ def export_html(
 # Tier 2: Browser-assisted extraction tools
 
 @mcp.tool()
-def property_web_search_tool(
+def property_web_search(
     query: str,
     max_results: int = 8,
     sites: list[str] | None = None,
@@ -214,14 +214,14 @@ def property_web_search_tool(
         Dict with 'results' list containing {title, url} objects and 'count'.
     """
     try:
-        results = property_web_search(query, max_results, sites)
+        results = _property_web_search(query, max_results, sites)
         return {"results": results, "count": len(results)}
     except ExtractionError as e:
         return {"error": str(e), "results": [], "count": 0}
 
 
 @mcp.tool()
-def property_listing_extract_tool(
+def property_listing_extract(
     url: str,
     commute_minutes: int | None = None,
 ) -> dict:
@@ -238,7 +238,7 @@ def property_listing_extract_tool(
         Dict with 'listing', 'diagnostics', 'quality', 'missing_fields', 'warnings'.
     """
     try:
-        result = property_listing_extract(url, commute_minutes)
+        result = _property_listing_extract(url, commute_minutes)
         diagnostics = result.diagnostics
         return {
             "listing": result.listing,
@@ -253,7 +253,7 @@ def property_listing_extract_tool(
 
 
 @mcp.tool()
-def extract_property_listings_tool(
+def extract_property_listings(
     urls: list[str],
     commute_minutes_by_url: dict[str, int] | None = None,
 ) -> dict:
@@ -276,7 +276,7 @@ def extract_property_listings_tool(
 
 
 @mcp.tool()
-def house_hunt_from_web_tool(
+def house_hunt_from_web(
     brief: str,
     max_results: int = 6,
     sites: list[str] | None = None,
