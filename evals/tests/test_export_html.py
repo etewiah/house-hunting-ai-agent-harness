@@ -106,3 +106,30 @@ def test_html_export_caps_max_listings_in_rendered_output(tmp_path):
     assert result.listing_count == 1
     assert "First home" in html
     assert "Second home" not in html
+
+
+def test_html_export_renders_acquisition_summary_when_present(tmp_path):
+    output_path = tmp_path / "report.html"
+    payload = ExportPayload(
+        ranked_listings=[_ranked_listing("First home")],
+        generated_outputs={
+            "acquisition_summary": {
+                "candidate_count": 6,
+                "located_count": 4,
+                "filtered_count": 3,
+                "ranked_count": 2,
+                "exclusion_reasons": {
+                    "location_filter": 2,
+                    "requirement_filters": 1,
+                    "rank_limit": 1,
+                },
+            }
+        },
+    )
+
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "Acquisition Summary" in html
+    assert "Candidates:" in html
+    assert "location filter 2" in html

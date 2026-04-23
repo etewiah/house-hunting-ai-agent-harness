@@ -9,6 +9,7 @@ class SessionState:
     buyer_profile: BuyerProfile | None = None
     ranked_listings: list[RankedListing] = field(default_factory=list)
     triage_warnings: list[str] = field(default_factory=list)
+    acquisition_summary: dict[str, object] = field(default_factory=dict)
     approvals: list[str] = field(default_factory=list)
     session: Session | None = None
     pipeline_status: dict[str, object] = field(

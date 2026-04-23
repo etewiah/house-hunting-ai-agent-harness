@@ -159,3 +159,60 @@ def test_pipeline_status_tracks_stage_history_for_browser_supplied_listings(tmp_
     final_event = history[-1]
     assert final_event["stage"] == "triage.completed"
     assert final_event["metrics"]["ranked_count"] == 1
+
+
+def test_acquisition_summary_tracks_exclusion_reasons(tmp_path):
+    app = HouseHuntOrchestrator(listings=None, trace_dir=str(tmp_path))
+    app.intake("2-bed flat near Birmingham New Street, under £250k, parking preferred")
+
+    ranked = app.triage_listing_dicts(
+        [
+            {
+                "id": "best",
+                "title": "Station Quarter Flat",
+                "price": 235_000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 15,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/best",
+            },
+            {
+                "id": "out_of_city",
+                "title": "Leeds Flat",
+                "price": 220_000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Leeds",
+                "commute_minutes": 14,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/leeds",
+            },
+            {
+                "id": "over_budget",
+                "title": "Birmingham Penthouse",
+                "price": 300_000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 14,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/penthouse",
+            },
+        ],
+        limit=1,
+    )
+
+    assert len(ranked) == 1
+    summary = app.get_acquisition_summary()
+    assert summary["candidate_count"] == 3
+    assert summary["located_count"] == 2
+    assert summary["filtered_count"] == 1
+    assert summary["ranked_count"] == 1
+    assert summary["exclusion_reasons"]["location_filter"] == 1
+    assert summary["exclusion_reasons"]["requirement_filters"] == 1
+    assert summary["exclusion_reasons"]["rank_limit"] == 0

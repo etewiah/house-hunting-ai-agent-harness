@@ -43,6 +43,29 @@ def _render(payload: ExportPayload, generated_at: str, listings) -> str:
         </section>
         """
 
+    acquisition_html = ""
+    acquisition = payload.generated_outputs.get("acquisition_summary") if payload.generated_outputs else None
+    if isinstance(acquisition, dict) and acquisition:
+        exclusion = acquisition.get("exclusion_reasons")
+        exclusion_html = ""
+        if isinstance(exclusion, dict):
+            exclusion_html = (
+                "<p><strong>Excluded:</strong> "
+                f"location filter {escape(str(exclusion.get('location_filter', 0)))}, "
+                f"requirement filters {escape(str(exclusion.get('requirement_filters', 0)))}, "
+                f"rank limit {escape(str(exclusion.get('rank_limit', 0)))}</p>"
+            )
+        acquisition_html = f"""
+        <section>
+          <h2>Acquisition Summary</h2>
+          <p><strong>Candidates:</strong> {escape(str(acquisition.get('candidate_count', 0)))}</p>
+          <p><strong>Location matched:</strong> {escape(str(acquisition.get('located_count', 0)))}</p>
+          <p><strong>After requirement filters:</strong> {escape(str(acquisition.get('filtered_count', 0)))}</p>
+          <p><strong>Ranked:</strong> {escape(str(acquisition.get('ranked_count', 0)))}</p>
+          {exclusion_html}
+        </section>
+        """
+
     listing_items = "\n".join(_render_listing(index, item) for index, item in enumerate(listings, 1))
     return f"""<!doctype html>
 <html lang="en">
@@ -64,6 +87,7 @@ def _render(payload: ExportPayload, generated_at: str, listings) -> str:
     <h1>House Hunting Report</h1>
     <p class="meta">Generated {escape(generated_at)}</p>
     {profile_html}
+    {acquisition_html}
     <section>
       <h2>Ranked Listings</h2>
       {listing_items or '<p>No listings exported.</p>'}

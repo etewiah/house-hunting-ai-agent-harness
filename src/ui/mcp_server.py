@@ -103,6 +103,7 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
     next_steps = app.prep_next_steps() if ranked else None
     return {
         "buyer_profile": asdict(profile),
+        "acquisition_summary": app.get_acquisition_summary(),
         "triage_warnings": app.state.triage_warnings,
         "ranked_listings": [_serialize_ranked_listing(item) for item in ranked],
         "explanations": explanations,

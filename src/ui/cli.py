@@ -81,6 +81,25 @@ def _print_pipeline_summary(status: dict[str, object]) -> None:
     print()
 
 
+def _print_acquisition_summary(summary: dict[str, object]) -> None:
+    print("Acquisition summary:\n")
+    if not summary:
+        print("  (no acquisition summary available)\n")
+        return
+    print(f"  - candidates: {summary.get('candidate_count', 0)}")
+    print(f"  - location matched: {summary.get('located_count', 0)}")
+    print(f"  - after requirement filters: {summary.get('filtered_count', 0)}")
+    print(f"  - ranked: {summary.get('ranked_count', 0)}")
+
+    exclusion_reasons = summary.get("exclusion_reasons")
+    if isinstance(exclusion_reasons, dict):
+        print("  - excluded:")
+        print(f"    location_filter={exclusion_reasons.get('location_filter', 0)}")
+        print(f"    requirement_filters={exclusion_reasons.get('requirement_filters', 0)}")
+        print(f"    rank_limit={exclusion_reasons.get('rank_limit', 0)}")
+    print()
+
+
 def run_interactive() -> None:
     print(_WELCOME)
 
@@ -164,6 +183,7 @@ def run_interactive() -> None:
 
     print(f"\n{next_steps['boundary']}\n")
 
+    _print_acquisition_summary(app.get_acquisition_summary())
     _print_pipeline_summary(app.get_pipeline_status())
 
     trace_path = app.tracer.flush("session")

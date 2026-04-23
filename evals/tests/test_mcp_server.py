@@ -50,6 +50,8 @@ def test_mcp_run_house_hunt_returns_structured_browser_first_workflow():
     )
 
     assert result["buyer_profile"]["max_budget"] == 250000
+    assert "acquisition_summary" in result
+    assert result["acquisition_summary"]["candidate_count"] == 2
     assert result["ranked_listings"][0]["listing"]["id"] == "best"
     assert result["explanations"]
     assert "Boundary:" in result["comparison"]

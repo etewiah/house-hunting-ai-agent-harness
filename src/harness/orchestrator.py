@@ -62,6 +62,9 @@ class HouseHuntOrchestrator:
             "history": list(history) if isinstance(history, list) else [],
         }
 
+    def get_acquisition_summary(self) -> dict[str, object]:
+        return dict(self.state.acquisition_summary)
+
     def intake(self, brief: str) -> BuyerProfile:
         self._set_pipeline_stage("intake.started", "Parsing buyer brief")
         profile = parse_buyer_brief(brief, llm=self.llm)
@@ -102,12 +105,45 @@ class HouseHuntOrchestrator:
         located, location_warnings = filter_by_location(self.state.buyer_profile.location_query, candidates)
         filtered = filter_listings(self.state.buyer_profile, located)
         self.state.triage_warnings = location_warnings
-        ranked = rank_listings(self.state.buyer_profile, filtered)[:limit]
+        ranked_all = rank_listings(self.state.buyer_profile, filtered)
+        ranked = ranked_all[:limit]
+        exclusion_reasons = {
+            "location_filter": max(0, len(candidates) - len(located)),
+            "requirement_filters": max(0, len(located) - len(filtered)),
+            "rank_limit": max(0, len(ranked_all) - len(ranked)),
+        }
+        extraction_coverage = {
+            "with_quality_score": sum(
+                1
+                for listing in candidates
+                if isinstance(listing.external_refs, dict)
+                and listing.external_refs.get("extraction_quality_score") is not None
+            ),
+            "with_extraction_warnings": sum(
+                1
+                for listing in candidates
+                if isinstance(listing.external_refs, dict)
+                and isinstance(listing.external_refs.get("extraction_warnings"), list)
+                and len(listing.external_refs.get("extraction_warnings") or []) > 0
+            ),
+        }
+        summary = {
+            "candidate_count": len(candidates),
+            "located_count": len(located),
+            "filtered_count": len(filtered),
+            "ranked_count": len(ranked),
+            "warning_count": len(location_warnings),
+            "limit": limit,
+            "exclusion_reasons": exclusion_reasons,
+            "extraction_coverage": extraction_coverage,
+        }
+        self.state.acquisition_summary = summary
         self.state.ranked_listings = ranked
         self.tracer.record(
             "triage.ranked_listings",
             {"warnings": location_warnings, "count": len(ranked), "items": ranked},
         )
+        self.tracer.record("triage.acquisition_summary", summary)
         self._set_pipeline_stage(
             "triage.completed",
             "Ranked listings ready",
@@ -210,6 +246,10 @@ class HouseHuntOrchestrator:
         payload = ExportPayload(
             buyer_profile=self.state.buyer_profile,
             ranked_listings=self.state.ranked_listings,
+            generated_outputs={
+                "acquisition_summary": self.state.acquisition_summary,
+                "pipeline_status": self.get_pipeline_status(),
+            },
             session_id=self.state.session.session_id if self.state.session is not None else None,
             external_refs=self.state.session.external_refs if self.state.session is not None else {},
         )
