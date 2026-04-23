@@ -3,40 +3,58 @@ import csv
 from src.ui import mcp_server
 
 
+def _browser_style_rank_inputs():
+    return [
+        {
+            "id": "best",
+            "title": "Station Quarter Flat",
+            "price": "£235,000",
+            "bedrooms": "2 bedrooms",
+            "bathrooms": "1 bathroom",
+            "location": "Birmingham",
+            "commute_minutes": "15 min",
+            "features": "parking",
+            "description": "",
+            "source_url": "https://example.com/best",
+        },
+        {
+            "id": "small",
+            "title": "Tiny Flat",
+            "price": "£190,000",
+            "bedrooms": "1 bedroom",
+            "bathrooms": "1 bathroom",
+            "location": "Birmingham",
+            "commute_minutes": "10 min",
+            "features": ["parking"],
+            "description": "",
+            "source_url": "https://example.com/small",
+        },
+    ]
+
+
 def test_mcp_rank_listings_accepts_browser_style_string_fields():
     ranked = mcp_server.rank_listings(
         "2-bed flat near Birmingham New Street, under £250k, max 25 min commute, parking preferred",
-        [
-            {
-                "id": "best",
-                "title": "Station Quarter Flat",
-                "price": "£235,000",
-                "bedrooms": "2 bedrooms",
-                "bathrooms": "1 bathroom",
-                "location": "Birmingham",
-                "commute_minutes": "15 min",
-                "features": "parking",
-                "description": "",
-                "source_url": "https://example.com/best",
-            },
-            {
-                "id": "small",
-                "title": "Tiny Flat",
-                "price": "£190,000",
-                "bedrooms": "1 bedroom",
-                "bathrooms": "1 bathroom",
-                "location": "Birmingham",
-                "commute_minutes": "10 min",
-                "features": ["parking"],
-                "description": "",
-                "source_url": "https://example.com/small",
-            },
-        ],
+        _browser_style_rank_inputs(),
     )
 
     assert ranked[0]["listing"]["id"] == "best"
     assert ranked[0]["listing"]["price"] == 235000
     assert ranked[0]["listing"]["commute_minutes"] == 15
+
+
+def test_mcp_run_house_hunt_returns_structured_browser_first_workflow():
+    result = mcp_server.run_house_hunt(
+        "2-bed flat near Birmingham New Street, under £250k, max 25 min commute, parking preferred",
+        _browser_style_rank_inputs(),
+    )
+
+    assert result["buyer_profile"]["max_budget"] == 250000
+    assert result["ranked_listings"][0]["listing"]["id"] == "best"
+    assert result["explanations"]
+    assert "Boundary:" in result["comparison"]
+    assert result["next_steps"]["affordability"]["listing_id"] == "best"
+    assert "negotiation advice" in result["next_steps"]["boundary"]
 
 
 def test_mcp_export_csv_respects_max_listings(tmp_path):

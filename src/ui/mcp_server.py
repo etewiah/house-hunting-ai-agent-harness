@@ -13,6 +13,7 @@ from dataclasses import asdict
 
 from mcp.server.fastmcp import FastMCP
 
+from src.harness.orchestrator import HouseHuntOrchestrator
 from src.models.schemas import Listing
 from src.models.schemas import ExportOptions, ExportPayload, RankedListing
 from src.skills.affordability import estimate_monthly_payment
@@ -49,6 +50,16 @@ def _to_ranked_listing(item: dict) -> RankedListing:
     )
 
 
+def _serialize_ranked_listing(item: RankedListing) -> dict[str, object]:
+    return {
+        "listing": asdict(item.listing),
+        "score": item.score,
+        "matched": item.matched,
+        "missed": item.missed,
+        "warnings": item.warnings,
+    }
+
+
 @mcp.tool()
 def parse_brief(brief: str) -> dict:
     """Parse a buyer's natural language brief into a structured profile.
@@ -73,16 +84,36 @@ def rank_listings(brief: str, listings: list[dict]) -> list[dict]:
     """
     profile = parse_buyer_brief(brief)
     ranked = _rank_listings(profile, [_to_listing(listing) for listing in listings])
-    return [
-        {
-            "listing": asdict(r.listing),
-            "score": r.score,
-            "matched": r.matched,
-            "missed": r.missed,
-            "warnings": r.warnings,
-        }
-        for r in ranked
-    ]
+    return [_serialize_ranked_listing(r) for r in ranked]
+
+
+@mcp.tool()
+def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
+    """Run the browser-first house-hunt workflow on supplied listings.
+
+    This parses the brief, filters and ranks the supplied listings, generates
+    explanations, creates a comparison summary, and prepares next steps for the
+    top match when available.
+    """
+    app = HouseHuntOrchestrator(listings=None)
+    profile = app.intake(brief)
+    ranked = app.triage_listing_dicts(listings, limit=limit)
+    explanations = app.explain_top_matches()
+    comparison = app.compare_top(count=min(3, len(ranked)))
+    next_steps = app.prep_next_steps() if ranked else None
+    return {
+        "buyer_profile": asdict(profile),
+        "triage_warnings": app.state.triage_warnings,
+        "ranked_listings": [_serialize_ranked_listing(item) for item in ranked],
+        "explanations": explanations,
+        "comparison": comparison,
+        "next_steps": None if next_steps is None else {
+            "boundary": next_steps["boundary"],
+            "affordability": asdict(next_steps["affordability"]),
+            "tour_questions": next_steps["tour_questions"],
+            "offer_brief": next_steps["offer_brief"],
+        },
+    }
 
 
 @mcp.tool()
