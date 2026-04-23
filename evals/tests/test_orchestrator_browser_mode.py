@@ -268,3 +268,54 @@ def test_area_context_summary_reports_ranked_listings_with_evidence(tmp_path):
     assert summary["listings_with_area_context"] == 1
     assert summary["items"][0]["listing_id"] == "with_area"
     assert "schools" in summary["items"][0]["categories"]
+
+
+def test_area_evidence_rollup_aggregates_sources_and_totals(tmp_path):
+    app = HouseHuntOrchestrator(listings=None, trace_dir=str(tmp_path))
+    app.intake("2-bed flat near Birmingham New Street, under £250k")
+
+    first = _listing("first", "First Flat", 235_000, 2, "Birmingham", 15, ["parking"])
+    first = Listing(
+        id=first.id,
+        title=first.title,
+        price=first.price,
+        bedrooms=first.bedrooms,
+        bathrooms=first.bathrooms,
+        location=first.location,
+        commute_minutes=first.commute_minutes,
+        features=first.features,
+        description=first.description,
+        source_url=first.source_url,
+        area_data=AreaData(
+            listing_id="first",
+            evidence=[
+                AreaEvidence(
+                    category="schools",
+                    summary="Two schools rated good nearby",
+                    source_name="Ofsted",
+                    source="estimated",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                ),
+                AreaEvidence(
+                    category="crime",
+                    summary="Crime trend stable",
+                    source_name="Police",
+                    source="listing_provided",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                ),
+            ],
+            warnings=["crime summary inferred"],
+        ),
+    )
+
+    second = _listing("second", "Second Flat", 220_000, 2, "Birmingham", 13, ["parking"])
+
+    app.triage_listings([first, second])
+
+    rollup = app.get_area_evidence_rollup(max_listings=5)
+    assert rollup["listing_count_considered"] == 2
+    assert rollup["listings_with_area_context"] == 1
+    assert rollup["total_evidence_items"] == 2
+    assert rollup["total_area_warnings"] == 1
+    assert rollup["evidence_by_source"]["estimated"] == 1
+    assert rollup["evidence_by_source"]["listing_provided"] == 1

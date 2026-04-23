@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 
 from src.harness.policies import advice_boundary_notice, check_output_guardrails
@@ -96,6 +97,35 @@ class HouseHuntOrchestrator:
             "listing_count_considered": len(considered),
             "listings_with_area_context": len(items),
             "items": items,
+        }
+
+    def get_area_evidence_rollup(self, max_listings: int = 5) -> dict[str, object]:
+        considered = self.state.ranked_listings[:max_listings]
+        source_counter: Counter[str] = Counter()
+        category_counter: Counter[str] = Counter()
+        total_evidence = 0
+        total_warnings = 0
+        listings_with_area = 0
+
+        for ranked in considered:
+            listing = ranked.listing
+            if listing.area_data is None:
+                continue
+            if listing.area_data.evidence:
+                listings_with_area += 1
+            total_warnings += len(listing.area_data.warnings)
+            for evidence in listing.area_data.evidence:
+                total_evidence += 1
+                source_counter[str(evidence.source)] += 1
+                category_counter[str(evidence.category)] += 1
+
+        return {
+            "listing_count_considered": len(considered),
+            "listings_with_area_context": listings_with_area,
+            "total_evidence_items": total_evidence,
+            "total_area_warnings": total_warnings,
+            "evidence_by_source": dict(source_counter),
+            "top_categories": dict(category_counter.most_common(5)),
         }
 
     def intake(self, brief: str) -> BuyerProfile:
@@ -282,6 +312,7 @@ class HouseHuntOrchestrator:
             generated_outputs={
                 "acquisition_summary": self.state.acquisition_summary,
                 "area_context_summary": self.get_area_context_summary(max_listings=options.max_listings),
+                "area_evidence_rollup": self.get_area_evidence_rollup(max_listings=options.max_listings),
                 "pipeline_status": self.get_pipeline_status(),
             },
             session_id=self.state.session.session_id if self.state.session is not None else None,

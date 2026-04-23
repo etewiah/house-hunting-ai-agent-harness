@@ -66,6 +66,23 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
         </section>
         """
 
+    area_rollup_html = ""
+    rollup = payload.generated_outputs.get("area_evidence_rollup") if payload.generated_outputs else None
+    if isinstance(rollup, dict):
+        by_source = rollup.get("evidence_by_source")
+        by_source_text = "none"
+        if isinstance(by_source, dict) and by_source:
+            by_source_text = ", ".join([f"{escape(str(k))}={escape(str(v))}" for k, v in sorted(by_source.items())])
+        area_rollup_html = f"""
+        <section>
+          <h2>Area Evidence Rollup</h2>
+          <p><strong>Listings with area context:</strong> {escape(str(rollup.get('listings_with_area_context', 0)))}</p>
+          <p><strong>Total evidence items:</strong> {escape(str(rollup.get('total_evidence_items', 0)))}</p>
+          <p><strong>Total area warnings:</strong> {escape(str(rollup.get('total_area_warnings', 0)))}</p>
+          <p><strong>By source:</strong> {by_source_text}</p>
+        </section>
+        """
+
     listing_items = "\n".join(
       _render_listing(index, item, include_area_data=include_area_data)
       for index, item in enumerate(listings, 1)
@@ -91,6 +108,7 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
     <p class="meta">Generated {escape(generated_at)}</p>
     {profile_html}
     {acquisition_html}
+    {area_rollup_html}
     <section>
       <h2>Ranked Listings</h2>
       {listing_items or '<p>No listings exported.</p>'}
@@ -150,6 +168,21 @@ def _render_listing(index: int, item, include_area_data: bool = True) -> str:
 
 
 def _warnings(payload: ExportPayload) -> list[str]:
-    if payload.buyer_profile is not None:
-        return ["Export includes buyer budget and preference context."]
-    return []
+  warnings: list[str] = []
+  if payload.buyer_profile is not None:
+    warnings.append("Export includes buyer budget and preference context.")
+  rollup = payload.generated_outputs.get("area_evidence_rollup") if payload.generated_outputs else None
+  if isinstance(rollup, dict):
+    total = int(rollup.get("total_evidence_items", 0) or 0)
+    listings = int(rollup.get("listings_with_area_context", 0) or 0)
+    by_source = rollup.get("evidence_by_source")
+    by_source_text = ""
+    if isinstance(by_source, dict) and by_source:
+      by_source_text = ", ".join([f"{k}={v}" for k, v in sorted(by_source.items())])
+    warning = f"Area evidence rollup: {total} evidence items across {listings} listings"
+    if by_source_text:
+      warning = f"{warning} ({by_source_text})."
+    else:
+      warning = f"{warning}."
+    warnings.append(warning)
+  return warnings

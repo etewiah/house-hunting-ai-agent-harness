@@ -227,3 +227,23 @@ def test_csv_export_skips_area_metadata_when_option_disabled(tmp_path):
     assert row["area_evidence_count"] == ""
     assert row["area_top_categories"] == ""
     assert row["area_warning_count"] == ""
+
+
+def test_csv_export_includes_area_rollup_warning_when_present(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    payload = ExportPayload(
+        ranked_listings=[_ranked_listing()],
+        generated_outputs={
+            "area_evidence_rollup": {
+                "total_evidence_items": 3,
+                "listings_with_area_context": 2,
+                "evidence_by_source": {"estimated": 2, "listing_provided": 1},
+            }
+        },
+    )
+
+    result = ExportOrchestrator().export(payload, ExportOptions(format="csv", output_path=str(output_path)))
+
+    joined = " ".join(result.warnings)
+    assert "Area evidence rollup: 3 evidence items across 2 listings" in joined
+    assert "estimated=2" in joined

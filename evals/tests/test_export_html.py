@@ -170,3 +170,26 @@ def test_html_export_renders_area_context_when_enabled(tmp_path):
     html = output_path.read_text(encoding="utf-8")
     assert "Area context:" in html
     assert "schools (estimated): Two schools rated good nearby" in html
+
+
+def test_html_export_renders_area_rollup_when_present(tmp_path):
+    output_path = tmp_path / "report.html"
+    payload = ExportPayload(
+        ranked_listings=[_ranked_listing("First home")],
+        generated_outputs={
+            "area_evidence_rollup": {
+                "listings_with_area_context": 2,
+                "total_evidence_items": 3,
+                "total_area_warnings": 1,
+                "evidence_by_source": {"estimated": 2, "listing_provided": 1},
+            }
+        },
+    )
+
+    result = ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "Area Evidence Rollup" in html
+    assert "Total evidence items:" in html
+    assert "estimated=2" in html
+    assert any("Area evidence rollup: 3 evidence items across 2 listings" in w for w in result.warnings)

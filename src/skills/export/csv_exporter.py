@@ -98,4 +98,18 @@ def _warnings(payload: ExportPayload) -> list[str]:
     warnings: list[str] = []
     if payload.buyer_profile is not None:
         warnings.append("Export includes buyer budget and preference context in session metadata.")
+    rollup = payload.generated_outputs.get("area_evidence_rollup") if payload.generated_outputs else None
+    if isinstance(rollup, dict):
+        total = int(rollup.get("total_evidence_items", 0) or 0)
+        listings = int(rollup.get("listings_with_area_context", 0) or 0)
+        by_source = rollup.get("evidence_by_source")
+        by_source_text = ""
+        if isinstance(by_source, dict) and by_source:
+            by_source_text = ", ".join([f"{k}={v}" for k, v in sorted(by_source.items())])
+        warning = f"Area evidence rollup: {total} evidence items across {listings} listings"
+        if by_source_text:
+            warning = f"{warning} ({by_source_text})."
+        else:
+            warning = f"{warning}."
+        warnings.append(warning)
     return warnings
