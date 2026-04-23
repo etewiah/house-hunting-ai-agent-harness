@@ -244,20 +244,38 @@ def main() -> None:
         "command",
         nargs="?",
         default="search",
-        choices=["search", "serve"],
+        choices=["search", "serve", "trace"],
         help=(
             "'search' (default) starts an interactive session; "
-            "'serve' starts the optional MCP server"
+            "'serve' starts the optional MCP server; "
+            "'trace' inspects a saved session trace"
         ),
     )
     parser.add_argument(
         "--export-path",
         help="Reserved for future non-interactive export commands.",
     )
+    parser.add_argument(
+        "--trace-path",
+        help="Path to a trace file (used with 'trace' command; defaults to most recent).",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available trace files (used with 'trace' command).",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Dump raw trace JSON (used with 'trace' command).",
+    )
     args = parser.parse_args()
     if args.command == "serve":
         from src.ui.mcp_server import mcp
         mcp.run()
+    elif args.command == "trace":
+        from src.ui.trace_viewer import main as trace_main
+        trace_main(path_arg=args.trace_path, list_only=args.list, raw_json=args.json)
     else:
         run_interactive()
 
