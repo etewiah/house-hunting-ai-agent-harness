@@ -17,6 +17,13 @@ from src.harness.orchestrator import HouseHuntOrchestrator
 from src.models.schemas import Listing
 from src.models.schemas import ExportOptions, ExportPayload, RankedListing
 from src.skills.affordability import estimate_monthly_payment
+from src.skills.browser_extraction import (
+    property_web_search,
+    property_listing_extract,
+    extract_property_listings as _extract_property_listings,
+    house_hunt_from_web as _house_hunt_from_web,
+    ExtractionError,
+)
 from src.skills.comparison import compare_homes as _compare_homes
 from src.skills.export import ExportOrchestrator
 from src.skills.intake import parse_buyer_brief
@@ -186,6 +193,138 @@ def export_html(
         ExportOptions(format="html", output_path=output_path, max_listings=max_listings),
     )
     return asdict(result)
+
+
+# Tier 2: Browser-assisted extraction tools
+
+@mcp.tool()
+def property_web_search_tool(
+    query: str,
+    max_results: int = 8,
+    sites: list[str] | None = None,
+) -> dict:
+    """Search the web for property listing URLs on Rightmove, Zoopla, OnTheMarket, etc.
+
+    Args:
+        query: Search query or buyer brief for finding listings
+        max_results: Max results to return (1-20, default 8)
+        sites: Optional domain list (defaults to major UK portals)
+
+    Returns:
+        Dict with 'results' list containing {title, url} objects and 'count'.
+    """
+    try:
+        results = property_web_search(query, max_results, sites)
+        return {"results": results, "count": len(results)}
+    except ExtractionError as e:
+        return {"error": str(e), "results": [], "count": 0}
+
+
+@mcp.tool()
+def property_listing_extract_tool(
+    url: str,
+    commute_minutes: int | None = None,
+) -> dict:
+    """Fetch a property listing page and extract normalized listing fields.
+
+    Calls the Pi extension's site-specific parsers (Rightmove, Zoopla, OnTheMarket)
+    with JSON-LD fallback. Returns normalized listing and extraction diagnostics.
+
+    Args:
+        url: Property listing URL
+        commute_minutes: Optional known commute time (overrides estimation)
+
+    Returns:
+        Dict with 'listing', 'diagnostics', 'quality', 'missing_fields', 'warnings'.
+    """
+    try:
+        result = property_listing_extract(url, commute_minutes)
+        diagnostics = result.diagnostics
+        return {
+            "listing": result.listing,
+            "diagnostics": diagnostics,
+            "quality": diagnostics.get("qualityScore", 0),
+            "missing_fields": diagnostics.get("missingFields", []),
+            "warnings": diagnostics.get("warnings", []),
+            "parser": diagnostics.get("parser", "unknown"),
+        }
+    except ExtractionError as e:
+        return {"error": str(e), "listing": None, "quality": 0}
+
+
+@mcp.tool()
+def extract_property_listings_tool(
+    urls: list[str],
+    commute_minutes_by_url: dict[str, int] | None = None,
+) -> dict:
+    """Batch extraction of property listings from multiple URLs.
+
+    Args:
+        urls: List of property listing URLs (max 20)
+        commute_minutes_by_url: Optional mapping of URL to known commute time
+
+    Returns:
+        Dict with 'extracted' (list of results), 'failed' (list of errors), 'count'.
+    """
+    result = _extract_property_listings(urls, commute_minutes_by_url)
+    return {
+        "extracted": result["extracted"],
+        "failed": result["failed"],
+        "extracted_count": len(result["extracted"]),
+        "failed_count": len(result["failed"]),
+    }
+
+
+@mcp.tool()
+def house_hunt_from_web_tool(
+    brief: str,
+    max_results: int = 6,
+    sites: list[str] | None = None,
+    min_quality_score: int = 45,
+    commute_destination: str | None = None,
+    commute_mode: str = "transit",
+) -> dict:
+    """End-to-end house hunt: search, extract, enrich commute, filter by quality, rank.
+
+    This tool runs the full browser-assisted flow: discovers candidate listings on the
+    web, extracts and normalizes them with quality scoring, enriches with heuristic
+    commute times, and filters by minimum quality before returning accepted listings.
+
+    Args:
+        brief: Buyer brief in plain English
+        max_results: Max search results to extract (1-12, default 6)
+        sites: Optional domain whitelist (defaults to Rightmove, Zoopla, OnTheMarket)
+        min_quality_score: Minimum extraction quality to accept (0-100, default 45)
+        commute_destination: Optional commute destination for enrichment (e.g. London)
+        commute_mode: Commute mode for heuristic enrichment (transit/driving/walking)
+
+    Returns:
+        Dict with 'search_results', 'extracted', 'accepted_listings', 'failed',
+        'average_quality', 'filtered_out_low_quality', and commute metadata.
+    """
+    result = _house_hunt_from_web(
+        brief,
+        max_results,
+        sites,
+        min_quality_score,
+        commute_destination,
+        commute_mode,
+    )
+    return {
+        "search_results": result.get("search_results", []),
+        "search_count": len(result.get("search_results", [])),
+        "extracted": result.get("extracted", []),
+        "extracted_count": len(result.get("extracted", [])),
+        "accepted_listings": result.get("accepted_listings", []),
+        "accepted_count": len(result.get("accepted_listings", [])),
+        "failed": result.get("failed", []),
+        "failed_count": len(result.get("failed", [])),
+        "average_quality": result.get("average_quality", 0),
+        "filtered_out_low_quality": result.get("filtered_out_low_quality", []),
+        "commute_destination": result.get("commute_destination"),
+        "commute_mode": result.get("commute_mode"),
+        "min_quality_score": result.get("min_quality_score"),
+    }
 
 
 if __name__ == "__main__":
