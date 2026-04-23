@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { extractListingFromHtml } from "./extractor-core.mjs";
 import { enrichListingsWithCommute, inferCommuteDestinationFromBrief } from "./commute-core.mjs";
+import { normalizeListingInput } from "./normalization-core.mjs";
 
 const DEFAULT_SITES = ["rightmove.co.uk", "zoopla.co.uk", "onthemarket.com"] as const;
 const FEATURE_KEYWORDS = [
@@ -32,17 +33,21 @@ const batchExtractParams = Type.Object({
   commuteMinutesByUrl: Type.Optional(Type.Record(Type.String(), Type.Integer({ minimum: 0 }))),
 });
 
+const intLikeSchema = Type.Union([Type.Integer(), Type.String()]);
+const nullableIntLikeSchema = Type.Union([Type.Integer(), Type.String(), Type.Null()]);
+
 const listingSchema = Type.Object({
   id: Type.String(),
   title: Type.String(),
-  price: Type.Integer(),
-  bedrooms: Type.Integer(),
-  bathrooms: Type.Integer(),
+  price: intLikeSchema,
+  bedrooms: intLikeSchema,
+  bathrooms: intLikeSchema,
   location: Type.String(),
-  commute_minutes: Type.Union([Type.Integer(), Type.Null()]),
-  features: Type.Array(Type.String()),
+  commute_minutes: nullableIntLikeSchema,
+  features: Type.Union([Type.Array(Type.String()), Type.String()]),
   description: Type.String(),
   source_url: Type.String(),
+  image_urls: Type.Optional(Type.Union([Type.Array(Type.String()), Type.String()])),
   external_refs: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 });
 
@@ -75,6 +80,7 @@ type ListingDict = {
   features: string[];
   description: string;
   source_url: string;
+  image_urls?: string[];
   external_refs?: Record<string, unknown>;
 };
 
@@ -227,7 +233,7 @@ export default function houseHuntBrowserExtension(pi: ExtensionAPI) {
       const harness = await runHarness(
         pi,
         params.brief,
-        params.listings,
+        params.listings.map((listing) => normalizeListingInput(listing as Record<string, unknown>)),
         signal,
         params.exportHtmlPath,
         params.exportCsvPath,

@@ -64,6 +64,7 @@ This saves the HTML under `test/fixtures/` and prints a suggested manifest entry
 - Search, extraction, and harness runs also write JSON trace files under `.tmp/` for debugging.
 - End-to-end web runs now filter out listings below a minimum extraction quality threshold (default `45/100`) before ranking.
 - End-to-end web runs can also estimate commute times heuristically from the brief or an explicit commute destination before ranking.
+- `run_house_hunt_harness` is tolerant of browser-style input such as `"£250,000"`, `"3 bedrooms"`, single-string feature lists, and optional image URLs.
 - There is now a small fixture-based test suite inspired by `property_web_scraper` under `test/`.
 - Extraction is still heuristic and should be treated as a best-effort normalizer.
 - Keep `source_url` for every listing and do not invent missing values.
