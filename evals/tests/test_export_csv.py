@@ -1,6 +1,6 @@
 import csv
 
-from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, Listing, RankedListing
+from src.models.schemas import AreaData, AreaEvidence, BuyerProfile, ExportOptions, ExportPayload, Listing, RankedListing
 from src.skills.export.csv_exporter import REQUIRED_COLUMNS
 from src.skills.export.export_orchestrator import ExportOrchestrator
 
@@ -145,3 +145,85 @@ def test_csv_export_includes_commute_estimation_metadata(tmp_path):
     assert row["commute_estimated"] == "yes"
     assert row["commute_destination"] == "Birmingham New Street"
     assert row["commute_mode"] == "transit"
+
+
+def test_csv_export_includes_area_metadata_columns(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=22,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        area_data=AreaData(
+            listing_id="L1",
+            evidence=[
+                AreaEvidence(
+                    category="schools",
+                    summary="Two schools rated good nearby",
+                    source_name="Ofsted",
+                    source="estimated",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                )
+            ],
+            warnings=["school distance estimated"],
+        ),
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=87.25, matched=["garden"], missed=[], warnings=[])],
+    )
+    ExportOrchestrator().export(payload, ExportOptions(format="csv", output_path=str(output_path)))
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["area_evidence_count"] == "1"
+    assert row["area_top_categories"] == "schools"
+    assert row["area_warning_count"] == "1"
+
+
+def test_csv_export_skips_area_metadata_when_option_disabled(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=22,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        area_data=AreaData(
+            listing_id="L1",
+            evidence=[
+                AreaEvidence(
+                    category="schools",
+                    summary="Two schools rated good nearby",
+                    source_name="Ofsted",
+                    source="estimated",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                )
+            ],
+        ),
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=87.25, matched=["garden"], missed=[], warnings=[])],
+    )
+    ExportOrchestrator().export(
+        payload,
+        ExportOptions(format="csv", output_path=str(output_path), include_area_data=False),
+    )
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["area_evidence_count"] == ""
+    assert row["area_top_categories"] == ""
+    assert row["area_warning_count"] == ""

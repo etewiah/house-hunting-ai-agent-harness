@@ -1,4 +1,4 @@
-from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, Listing, RankedListing
+from src.models.schemas import AreaData, AreaEvidence, BuyerProfile, ExportOptions, ExportPayload, Listing, RankedListing
 from src.skills.export.export_orchestrator import ExportOrchestrator
 
 
@@ -133,3 +133,40 @@ def test_html_export_renders_acquisition_summary_when_present(tmp_path):
     assert "Acquisition Summary" in html
     assert "Candidates:" in html
     assert "location filter 2" in html
+
+
+def test_html_export_renders_area_context_when_enabled(tmp_path):
+    output_path = tmp_path / "report.html"
+    listing = Listing(
+        id="L1",
+        title="Area context home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=22,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        area_data=AreaData(
+            listing_id="L1",
+            evidence=[
+                AreaEvidence(
+                    category="schools",
+                    summary="Two schools rated good nearby",
+                    source_name="Ofsted",
+                    source="estimated",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                )
+            ],
+        ),
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=87.0, matched=["garden"], missed=[], warnings=[])],
+    )
+
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "Area context:" in html
+    assert "schools (estimated): Two schools rated good nearby" in html

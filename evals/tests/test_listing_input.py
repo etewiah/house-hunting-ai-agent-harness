@@ -53,3 +53,38 @@ def test_listing_from_dict_handles_missing_or_invalid_collection_fields():
     assert listing.features == []
     assert listing.image_urls == []
     assert listing.external_refs == {}
+
+
+def test_listing_from_dict_coerces_area_data_evidence():
+    listing = listing_from_dict(
+        {
+            "id": "listing-3",
+            "title": "Example with area context",
+            "price": "£300,000",
+            "bedrooms": "2",
+            "bathrooms": "1",
+            "location": "Birmingham",
+            "commute_minutes": "20",
+            "features": ["parking"],
+            "description": "",
+            "source_url": "https://example.com/listing",
+            "area_data": {
+                "evidence": [
+                    {
+                        "category": "schools",
+                        "summary": "Two schools rated good nearby",
+                        "source_name": "Ofsted",
+                        "source": "listing_provided",
+                        "retrieved_at": "2026-04-23T12:00:00Z",
+                    }
+                ],
+                "warnings": ["school distance estimated"],
+            },
+        }
+    )
+
+    assert listing.area_data is not None
+    assert listing.area_data.listing_id == "listing-3"
+    assert len(listing.area_data.evidence) == 1
+    assert listing.area_data.evidence[0].category == "schools"
+    assert listing.area_data.warnings == ["school distance estimated"]

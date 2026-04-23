@@ -51,9 +51,14 @@ def _explain_with_template(item: RankedListing) -> str:
     if item.warnings:
         parts.append(f"Warnings: {', '.join(item.warnings)}.")
     commute_source = "estimated" if listing.external_refs.get("commute_estimation") else "listing_provided"
+    area_source = "missing"
+    if listing.area_data and listing.area_data.evidence:
+        area_source = ", ".join(
+            [f"{e.category}:{e.source}" for e in listing.area_data.evidence[:2]]
+        )
     parts.append(
         "Sources: price, bedroom count, and features are listing_provided unless marked missing; "
-        f"commute is {commute_source} unless marked missing."
+        f"commute is {commute_source} unless marked missing; area context is {area_source}."
     )
     return " ".join(parts)
 

@@ -16,6 +16,13 @@ def compare_homes(listings: list[Listing]) -> str:
             f"- {listing.title}: £{listing.price:,}, {listing.bedrooms} beds, "
             f"{listing.bathrooms} baths, commute {commute}, features: {', '.join(listing.features)}"
         )
+        if listing.area_data and listing.area_data.evidence:
+            top = listing.area_data.evidence[:2]
+            area_bits = [
+                f"{item.category} ({item.source}): {item.summary}"
+                for item in top
+            ]
+            lines.append(f"  area context: {' | '.join(area_bits)}")
     lines.append("")
     lines.append("Boundary: this is a comparison aid, not legal, mortgage, survey, or inspection advice.")
     return "\n".join(lines)

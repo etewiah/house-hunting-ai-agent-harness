@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from src.models.schemas import Listing
+from src.models.schemas import AreaData, AreaEvidence, Listing
 
 
 def listing_from_dict(data: dict[str, object]) -> Listing:
@@ -18,6 +18,7 @@ def listing_from_dict(data: dict[str, object]) -> Listing:
         features=_coerce_string_list(data.get("features")),
         description=str(data.get("description", "")),
         source_url=str(data.get("source_url", "")),
+        area_data=_coerce_area_data(data.get("area_data"), listing_id=str(data.get("id", ""))),
         image_urls=_coerce_string_list(data.get("image_urls")),
         external_refs=_coerce_dict(data.get("external_refs")),
     )
@@ -62,3 +63,29 @@ def _coerce_dict(value: object) -> dict[str, object]:
     if isinstance(value, dict):
         return {str(key): item for key, item in value.items()}
     return {}
+
+
+def _coerce_area_data(value: object, listing_id: str) -> AreaData | None:
+    if not isinstance(value, dict):
+        return None
+    evidence_items: list[AreaEvidence] = []
+    raw_evidence = value.get("evidence")
+    if isinstance(raw_evidence, Iterable) and not isinstance(raw_evidence, (str, bytes, dict)):
+        for item in raw_evidence:
+            if not isinstance(item, dict):
+                continue
+            evidence_items.append(
+                AreaEvidence(
+                    category=str(item.get("category", "unknown")),
+                    summary=str(item.get("summary", "")),
+                    source_name=str(item.get("source_name", "unknown")),
+                    source=str(item.get("source", "missing")),
+                    retrieved_at=str(item.get("retrieved_at", "")),
+                    jurisdiction=None if item.get("jurisdiction") is None else str(item.get("jurisdiction")),
+                    confidence=None if item.get("confidence") is None else str(item.get("confidence")),
+                    details=_coerce_dict(item.get("details")),
+                    warnings=_coerce_string_list(item.get("warnings")),
+                )
+            )
+    warnings = _coerce_string_list(value.get("warnings"))
+    return AreaData(listing_id=listing_id, evidence=evidence_items, warnings=warnings)

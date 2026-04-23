@@ -15,7 +15,7 @@ def export_html(
     output_path = Path(options.output_path or "house-hunt-report.html")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     listings = payload.ranked_listings[: options.max_listings]
-    html = _render(payload, generated_at, listings)
+    html = _render(payload, generated_at, listings, include_area_data=options.include_area_data)
     output_path.write_text(html, encoding="utf-8")
     return ExportResult(
         format="html",
@@ -27,7 +27,7 @@ def export_html(
     )
 
 
-def _render(payload: ExportPayload, generated_at: str, listings) -> str:
+def _render(payload: ExportPayload, generated_at: str, listings, include_area_data: bool = True) -> str:
     profile = payload.buyer_profile
     profile_html = ""
     if profile is not None:
@@ -66,7 +66,10 @@ def _render(payload: ExportPayload, generated_at: str, listings) -> str:
         </section>
         """
 
-    listing_items = "\n".join(_render_listing(index, item) for index, item in enumerate(listings, 1))
+    listing_items = "\n".join(
+      _render_listing(index, item, include_area_data=include_area_data)
+      for index, item in enumerate(listings, 1)
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -102,7 +105,7 @@ def _render(payload: ExportPayload, generated_at: str, listings) -> str:
 """
 
 
-def _render_listing(index: int, item) -> str:
+def _render_listing(index: int, item, include_area_data: bool = True) -> str:
     listing = item.listing
     commute = "unknown" if listing.commute_minutes is None else f"{listing.commute_minutes} minutes"
     matched = escape(", ".join(item.matched) or "None")
@@ -110,6 +113,7 @@ def _render_listing(index: int, item) -> str:
     warnings = escape(", ".join(item.warnings) or "None")
     extraction_quality = ""
     commute_meta = ""
+    area_meta = ""
     if listing.external_refs:
         quality = listing.external_refs.get("extraction_quality_score")
         parser = listing.external_refs.get("extraction_parser")
@@ -122,6 +126,13 @@ def _render_listing(index: int, item) -> str:
             destination = escape(str(commute_estimation.get("destination", "unknown")))
             mode = escape(str(commute_estimation.get("mode", "unknown")))
             commute_meta = f"<p><strong>Commute:</strong> estimated toward {destination} via {mode}</p>"
+    if include_area_data and listing.area_data is not None and listing.area_data.evidence:
+        top_evidence = listing.area_data.evidence[:3]
+        evidence_parts = [
+            f"{escape(item.category)} ({escape(item.source)}): {escape(item.summary)}"
+            for item in top_evidence
+        ]
+        area_meta = f"<p><strong>Area context:</strong> {' | '.join(evidence_parts)}</p>"
     return f"""
       <article class="listing">
         <h3>{index}. {escape(listing.title)} ({item.score:.0f}/100)</h3>
@@ -131,6 +142,7 @@ def _render_listing(index: int, item) -> str:
         <p><strong>Missed:</strong> {missed}</p>
         <p><strong>Warnings:</strong> {warnings}</p>
         {commute_meta}
+        {area_meta}
         {extraction_quality}
         <p><a href="{escape(listing.source_url)}">Source listing</a></p>
       </article>

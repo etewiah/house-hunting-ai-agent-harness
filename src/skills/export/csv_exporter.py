@@ -22,6 +22,9 @@ REQUIRED_COLUMNS = [
     "commute_mode",
     "extraction_quality_score",
     "extraction_parser",
+    "area_evidence_count",
+    "area_top_categories",
+    "area_warning_count",
     "source_url",
 ]
 
@@ -33,7 +36,7 @@ def export_csv(
 ) -> ExportResult:
     output_path = Path(options.output_path or "house-hunt-shortlist.csv")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    rows = _rows(payload.ranked_listings[: options.max_listings])
+    rows = _rows(payload.ranked_listings[: options.max_listings], include_area_data=options.include_area_data)
 
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=REQUIRED_COLUMNS)
@@ -50,13 +53,20 @@ def export_csv(
     )
 
 
-def _rows(ranked_listings: list[RankedListing]) -> list[dict[str, object]]:
+def _rows(ranked_listings: list[RankedListing], include_area_data: bool) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for index, item in enumerate(ranked_listings, 1):
         listing = item.listing
         commute_estimation = listing.external_refs.get("commute_estimation") if listing.external_refs else None
         extraction_quality = listing.external_refs.get("extraction_quality_score") if listing.external_refs else None
         extraction_parser = listing.external_refs.get("extraction_parser") if listing.external_refs else None
+        area_evidence_count = 0
+        area_top_categories = ""
+        area_warning_count = 0
+        if include_area_data and listing.area_data is not None:
+            area_evidence_count = len(listing.area_data.evidence)
+            area_top_categories = ";".join([item.category for item in listing.area_data.evidence[:3]])
+            area_warning_count = len(listing.area_data.warnings)
         rows.append(
             {
                 "rank": index,
@@ -75,6 +85,9 @@ def _rows(ranked_listings: list[RankedListing]) -> list[dict[str, object]]:
                 "commute_mode": "" if not isinstance(commute_estimation, dict) else commute_estimation.get("mode", ""),
                 "extraction_quality_score": "" if extraction_quality is None else extraction_quality,
                 "extraction_parser": "" if extraction_parser is None else extraction_parser,
+                "area_evidence_count": area_evidence_count if include_area_data else "",
+                "area_top_categories": area_top_categories if include_area_data else "",
+                "area_warning_count": area_warning_count if include_area_data else "",
                 "source_url": listing.source_url,
             }
         )
