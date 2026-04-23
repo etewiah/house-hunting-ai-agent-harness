@@ -2,6 +2,25 @@
 
 **Scope:** Changes inside `house-hunting-ai-agent-harness/` needed to support deep integration with the HomesToCompare TypeScript application, maintain the harness as a useful standalone reference, and evolve it toward v0.2.
 
+## Status note
+
+This document started as a forward-looking integration checklist. Some items here are now
+implemented in the harness, while others remain roadmap or coordination items with the main
+HomesToCompare application.
+
+### Implemented in this repo now
+- provider-backed HomesToCompare listing support
+- HomesToCompare comparison creation from the orchestrator
+- optional LLM-backed intake
+- fair-housing-sensitive generated-language checks
+- missing-commute warning coverage
+- README integration guidance
+
+### Still mainly roadmap / coordination items
+- any new HomesToCompare API endpoints required outside this repo
+- deeper live integration verification against the main TypeScript app
+- any broader v0.2 expansion not yet reflected in the current codebase
+
 ---
 
 ## 1. HomesToCompare HTTP connector — wire up to HomesToCompare API

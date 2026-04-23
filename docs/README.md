@@ -34,7 +34,7 @@ If you are trying to understand the project quickly, read these first:
 - `providers.md`
   - provider-facing design notes
 - `INTEGRATION_UPDATES.md`
-  - HomesToCompare-oriented integration notes and planned/parallel changes
+  - HomesToCompare-oriented integration notes, implemented status notes, and remaining coordination items
 
 ## Browser-first / Pi docs
 
