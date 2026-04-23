@@ -93,6 +93,66 @@ def test_html_export_renders_commute_estimation_metadata(tmp_path):
     assert "estimated toward Birmingham New Street via transit" in html
 
 
+def test_html_export_renders_extraction_missing_fields(tmp_path):
+    output_path = tmp_path / "report.html"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=None,
+        features=[],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={
+            "extraction_quality_score": 55,
+            "extraction_parser": "generic",
+            "extraction_diagnostics": {
+                "missingFields": ["bathrooms", "commute_minutes"],
+                "warnings": ["price extracted from text only"],
+            },
+        },
+    )
+    payload = ExportPayload(ranked_listings=[RankedListing(listing=listing, score=60.0, matched=[], missed=[], warnings=[])])
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "unconfirmed: bathrooms, commute_minutes" in html
+    assert "price extracted from text only" in html
+
+
+def test_html_export_renders_commute_inferred_from_brief(tmp_path):
+    output_path = tmp_path / "report.html"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=35,
+        features=[],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={
+            "commute_estimation": {
+                "destination": "London",
+                "mode": "transit",
+                "source": "estimated",
+                "provider": "house-hunt-browser-heuristic",
+            }
+        },
+    )
+    payload = ExportPayload(ranked_listings=[RankedListing(listing=listing, score=75.0, matched=[], missed=[], warnings=[])])
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "estimated toward London via transit" in html
+    assert "inferred from brief" in html
+
+
 def test_html_export_caps_max_listings_in_rendered_output(tmp_path):
     output_path = tmp_path / "report.html"
     payload = ExportPayload(ranked_listings=[_ranked_listing("First home"), _ranked_listing("Second home")])

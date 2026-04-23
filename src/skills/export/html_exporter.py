@@ -140,14 +140,30 @@ def _render_listing(index: int, item, include_area_data: bool = True) -> str:
         quality = listing.external_refs.get("extraction_quality_score")
         parser = listing.external_refs.get("extraction_parser")
         commute_estimation = listing.external_refs.get("commute_estimation")
+        diagnostics = listing.external_refs.get("extraction_diagnostics")
+        missing_fields = diagnostics.get("missingFields", []) if isinstance(diagnostics, dict) else []
+        diag_warnings = diagnostics.get("warnings", []) if isinstance(diagnostics, dict) else []
         if quality is not None or parser is not None:
             quality_text = "unknown" if quality is None else f"{quality}/100"
             parser_text = "unknown" if parser is None else escape(str(parser))
-            extraction_quality = f"<p><strong>Extraction:</strong> quality {quality_text} | parser {parser_text}</p>"
+            missing_text = (
+                f" | unconfirmed: {escape(', '.join(missing_fields))}"
+                if missing_fields else ""
+            )
+            warn_text = (
+                f"<br><small>Extraction notes: {escape('; '.join(diag_warnings))}</small>"
+                if diag_warnings else ""
+            )
+            extraction_quality = (
+                f"<p><strong>Extraction:</strong> quality {quality_text} | parser {parser_text}"
+                f"{missing_text}{warn_text}</p>"
+            )
         if isinstance(commute_estimation, dict):
             destination = escape(str(commute_estimation.get("destination", "unknown")))
             mode = escape(str(commute_estimation.get("mode", "unknown")))
-            commute_meta = f"<p><strong>Commute:</strong> estimated toward {destination} via {mode}</p>"
+            source = commute_estimation.get("source", "")
+            inferred_note = " (inferred from brief)" if source == "estimated" else ""
+            commute_meta = f"<p><strong>Commute:</strong> estimated toward {destination} via {mode}{inferred_note}</p>"
     if include_area_data and listing.area_data is not None and listing.area_data.evidence:
         top_evidence = listing.area_data.evidence[:3]
         evidence_parts = [

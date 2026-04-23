@@ -22,6 +22,8 @@ REQUIRED_COLUMNS = [
     "commute_mode",
     "extraction_quality_score",
     "extraction_parser",
+    "extraction_missing_fields",
+    "extraction_warnings",
     "area_evidence_count",
     "area_top_categories",
     "area_warning_count",
@@ -60,6 +62,9 @@ def _rows(ranked_listings: list[RankedListing], include_area_data: bool) -> list
         commute_estimation = listing.external_refs.get("commute_estimation") if listing.external_refs else None
         extraction_quality = listing.external_refs.get("extraction_quality_score") if listing.external_refs else None
         extraction_parser = listing.external_refs.get("extraction_parser") if listing.external_refs else None
+        diagnostics = listing.external_refs.get("extraction_diagnostics") if listing.external_refs else None
+        extraction_missing = diagnostics.get("missingFields", []) if isinstance(diagnostics, dict) else []
+        extraction_diag_warnings = diagnostics.get("warnings", []) if isinstance(diagnostics, dict) else []
         area_evidence_count = 0
         area_top_categories = ""
         area_warning_count = 0
@@ -85,6 +90,8 @@ def _rows(ranked_listings: list[RankedListing], include_area_data: bool) -> list
                 "commute_mode": "" if not isinstance(commute_estimation, dict) else commute_estimation.get("mode", ""),
                 "extraction_quality_score": "" if extraction_quality is None else extraction_quality,
                 "extraction_parser": "" if extraction_parser is None else extraction_parser,
+                "extraction_missing_fields": ";".join(extraction_missing),
+                "extraction_warnings": ";".join(extraction_diag_warnings),
                 "area_evidence_count": area_evidence_count if include_area_data else "",
                 "area_top_categories": area_top_categories if include_area_data else "",
                 "area_warning_count": area_warning_count if include_area_data else "",

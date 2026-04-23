@@ -147,6 +147,67 @@ def test_csv_export_includes_commute_estimation_metadata(tmp_path):
     assert row["commute_mode"] == "transit"
 
 
+def test_csv_export_includes_extraction_provenance_columns(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=30,
+        features=["garden"],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={
+            "extraction_quality_score": 58,
+            "extraction_parser": "rightmove",
+            "extraction_diagnostics": {
+                "missingFields": ["bathrooms", "commute_minutes"],
+                "warnings": ["price extracted from text only", "no JSON-LD found"],
+            },
+        },
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=72.0, matched=[], missed=[], warnings=[])],
+    )
+    ExportOrchestrator().export(payload, ExportOptions(format="csv", output_path=str(output_path)))
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["extraction_missing_fields"] == "bathrooms;commute_minutes"
+    assert row["extraction_warnings"] == "price extracted from text only;no JSON-LD found"
+
+
+def test_csv_export_extraction_provenance_empty_when_no_diagnostics(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    listing = Listing(
+        id="L1",
+        title="Example home",
+        price=450000,
+        bedrooms=3,
+        bathrooms=1,
+        location="Example town",
+        commute_minutes=30,
+        features=[],
+        description="",
+        source_url="https://example.com/listing",
+        external_refs={"extraction_quality_score": 82, "extraction_parser": "zoopla"},
+    )
+    payload = ExportPayload(
+        ranked_listings=[RankedListing(listing=listing, score=80.0, matched=[], missed=[], warnings=[])],
+    )
+    ExportOrchestrator().export(payload, ExportOptions(format="csv", output_path=str(output_path)))
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["extraction_missing_fields"] == ""
+    assert row["extraction_warnings"] == ""
+
+
 def test_csv_export_includes_area_metadata_columns(tmp_path):
     output_path = tmp_path / "shortlist.csv"
     listing = Listing(
