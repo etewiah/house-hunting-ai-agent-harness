@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "house-hunt": {
+      "command": "uv",
+      "args": ["run", "house-hunt", "serve"],
+      "cwd": "${workspaceFolder}",
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(mkdir -p .tmp)",
+      "Bash(python .pi/skills/browser-house-hunt/run_house_hunt.py:*)",
+      "Bash(ls .pi/skills/browser-house-hunt:*)",
+      "Write(.tmp/*)",
+      "Read(.pi/skills/browser-house-hunt/*)"
+    ]
+  }
+}

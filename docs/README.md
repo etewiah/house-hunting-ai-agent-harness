@@ -49,6 +49,17 @@ If you are trying to understand the project quickly, read these first:
 - `../.pi/skills/browser-house-hunt/SKILL.md`
   - Pi skill instructions for browser-assisted house hunting
 
+## Claude Code integration
+
+- `claude-code-parity-plan.md`
+  - complete roadmap for bringing Claude Code to feature parity with Pi
+  - three tiers: wiring (Tier 1, complete), extraction quality (Tier 2), polish (Tier 3)
+  - detailed acceptance criteria, risks, and rollout plan
+- `../.claude/skills/browser-house-hunt/SKILL.md`
+  - Claude Code skill for browser-assisted house hunting (Tier 1)
+- `../.claude/commands/house-hunt-smoke.md`
+  - slash command to smoke-test the browser-assisted flow (Tier 1)
+
 ## Which doc should I read?
 
 ### I want to use Pi with this repo
@@ -72,3 +83,9 @@ If you are trying to understand the project quickly, read these first:
 ### I want to understand the architecture
 - `architecture.md`
 - `roadmap.md`
+
+### I want to use Claude Code with this repo
+- `../README.md`
+- `browser-assisted-guide.md`
+- `.claude/skills/browser-house-hunt/SKILL.md`
+- `claude-code-parity-plan.md` (for the full integration roadmap)
