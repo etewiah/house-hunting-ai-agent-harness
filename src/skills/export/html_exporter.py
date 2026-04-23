@@ -3,6 +3,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
+from src.harness.policies import advice_boundary_notice
 from src.models.schemas import ExportOptions, ExportPayload, ExportResult
 
 
@@ -68,8 +69,8 @@ def _render(payload: ExportPayload, generated_at: str, listings) -> str:
       {listing_items or '<p>No listings exported.</p>'}
     </section>
     <footer>
-      <p>This report is an AI-assisted research aid. It is not mortgage, legal, survey,
-      inspection, or valuation advice. Verify important details independently.</p>
+      <p>This report is an AI-assisted research aid. {escape(advice_boundary_notice())}
+      Verify important details independently.</p>
     </footer>
   </main>
 </body>

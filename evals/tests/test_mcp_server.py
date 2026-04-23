@@ -1,0 +1,141 @@
+import csv
+
+from src.ui import mcp_server
+
+
+def test_mcp_rank_listings_accepts_browser_style_string_fields():
+    ranked = mcp_server.rank_listings(
+        "2-bed flat near Birmingham New Street, under £250k, max 25 min commute, parking preferred",
+        [
+            {
+                "id": "best",
+                "title": "Station Quarter Flat",
+                "price": "£235,000",
+                "bedrooms": "2 bedrooms",
+                "bathrooms": "1 bathroom",
+                "location": "Birmingham",
+                "commute_minutes": "15 min",
+                "features": "parking",
+                "description": "",
+                "source_url": "https://example.com/best",
+            },
+            {
+                "id": "small",
+                "title": "Tiny Flat",
+                "price": "£190,000",
+                "bedrooms": "1 bedroom",
+                "bathrooms": "1 bathroom",
+                "location": "Birmingham",
+                "commute_minutes": "10 min",
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/small",
+            },
+        ],
+    )
+
+    assert ranked[0]["listing"]["id"] == "best"
+    assert ranked[0]["listing"]["price"] == 235000
+    assert ranked[0]["listing"]["commute_minutes"] == 15
+
+
+def test_mcp_export_csv_respects_max_listings(tmp_path):
+    output_path = tmp_path / "shortlist.csv"
+    ranked_listings = [
+        {
+            "listing": {
+                "id": "a",
+                "title": "First home",
+                "price": 200000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 15,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/a",
+            },
+            "score": 90,
+            "matched": ["parking"],
+            "missed": [],
+            "warnings": [],
+        },
+        {
+            "listing": {
+                "id": "b",
+                "title": "Second home",
+                "price": 210000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 20,
+                "features": ["garden"],
+                "description": "",
+                "source_url": "https://example.com/b",
+            },
+            "score": 80,
+            "matched": ["garden"],
+            "missed": [],
+            "warnings": [],
+        },
+    ]
+
+    result = mcp_server.export_csv(ranked_listings, output_path=str(output_path), max_listings=1)
+
+    with output_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert result["listing_count"] == 1
+    assert len(rows) == 1
+    assert rows[0]["title"] == "First home"
+
+
+def test_mcp_export_html_respects_max_listings_and_boundary_notice(tmp_path):
+    output_path = tmp_path / "report.html"
+    ranked_listings = [
+        {
+            "listing": {
+                "id": "a",
+                "title": "First home",
+                "price": 200000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 15,
+                "features": ["parking"],
+                "description": "",
+                "source_url": "https://example.com/a",
+            },
+            "score": 90,
+            "matched": ["parking"],
+            "missed": [],
+            "warnings": [],
+        },
+        {
+            "listing": {
+                "id": "b",
+                "title": "Second home",
+                "price": 210000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "location": "Birmingham",
+                "commute_minutes": 20,
+                "features": ["garden"],
+                "description": "",
+                "source_url": "https://example.com/b",
+            },
+            "score": 80,
+            "matched": ["garden"],
+            "missed": [],
+            "warnings": [],
+        },
+    ]
+
+    result = mcp_server.export_html(ranked_listings, output_path=str(output_path), max_listings=1)
+    html = output_path.read_text(encoding="utf-8")
+
+    assert result["listing_count"] == 1
+    assert "First home" in html
+    assert "Second home" not in html
+    assert "negotiation advice" in html
+    assert "fiduciary" in html

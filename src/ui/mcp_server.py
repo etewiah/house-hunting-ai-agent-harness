@@ -38,6 +38,17 @@ def _to_listing(d: dict) -> Listing:
     return listing_from_dict(d)
 
 
+def _to_ranked_listing(item: dict) -> RankedListing:
+    listing_data = item.get("listing", item)
+    return RankedListing(
+        listing=_to_listing(listing_data),
+        score=float(item.get("score", 0)),
+        matched=[str(value) for value in list(item.get("matched") or [])],
+        missed=[str(value) for value in list(item.get("missed") or [])],
+        warnings=[str(value) for value in list(item.get("warnings") or [])],
+    )
+
+
 @mcp.tool()
 def parse_brief(brief: str) -> dict:
     """Parse a buyer's natural language brief into a structured profile.
@@ -110,49 +121,35 @@ def offer_brief(listing: dict) -> str:
 
 
 @mcp.tool()
-def export_csv(ranked_listings: list[dict], output_path: str | None = None) -> dict:
+def export_csv(
+    ranked_listings: list[dict],
+    output_path: str | None = None,
+    max_listings: int = 5,
+) -> dict:
     """Export ranked listings to a CSV file.
 
     Each ranked listing dict may be either the output from rank_listings or a dict
     containing listing, score, matched, missed, and warnings keys.
     """
-    ranked = []
-    for item in ranked_listings:
-        listing_data = item.get("listing", item)
-        ranked.append(
-            RankedListing(
-                listing=_to_listing(listing_data),
-                score=float(item.get("score", 0)),
-                matched=list(item.get("matched") or []),
-                missed=list(item.get("missed") or []),
-                warnings=list(item.get("warnings") or []),
-            )
-        )
+    ranked = [_to_ranked_listing(item) for item in ranked_listings]
     result = ExportOrchestrator().export(
         ExportPayload(ranked_listings=ranked),
-        ExportOptions(format="csv", output_path=output_path),
+        ExportOptions(format="csv", output_path=output_path, max_listings=max_listings),
     )
     return asdict(result)
 
 
 @mcp.tool()
-def export_html(ranked_listings: list[dict], output_path: str | None = None) -> dict:
+def export_html(
+    ranked_listings: list[dict],
+    output_path: str | None = None,
+    max_listings: int = 5,
+) -> dict:
     """Export ranked listings to a self-contained HTML report."""
-    ranked = []
-    for item in ranked_listings:
-        listing_data = item.get("listing", item)
-        ranked.append(
-            RankedListing(
-                listing=_to_listing(listing_data),
-                score=float(item.get("score", 0)),
-                matched=list(item.get("matched") or []),
-                missed=list(item.get("missed") or []),
-                warnings=list(item.get("warnings") or []),
-            )
-        )
+    ranked = [_to_ranked_listing(item) for item in ranked_listings]
     result = ExportOrchestrator().export(
         ExportPayload(ranked_listings=ranked),
-        ExportOptions(format="html", output_path=output_path),
+        ExportOptions(format="html", output_path=output_path, max_listings=max_listings),
     )
     return asdict(result)
 
