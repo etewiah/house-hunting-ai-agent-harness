@@ -319,3 +319,5 @@ def test_area_evidence_rollup_aggregates_sources_and_totals(tmp_path):
     assert rollup["total_area_warnings"] == 1
     assert rollup["evidence_by_source"]["estimated"] == 1
     assert rollup["evidence_by_source"]["listing_provided"] == 1
+    assert rollup["confidence_band"] in {"low", "medium", "high"}
+    assert rollup["confidence_reason"]

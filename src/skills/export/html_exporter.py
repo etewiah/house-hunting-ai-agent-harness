@@ -73,12 +73,16 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
         by_source_text = "none"
         if isinstance(by_source, dict) and by_source:
             by_source_text = ", ".join([f"{escape(str(k))}={escape(str(v))}" for k, v in sorted(by_source.items())])
+        confidence_band = escape(str(rollup.get("confidence_band", "unknown")))
+        confidence_reason = escape(str(rollup.get("confidence_reason", "")))
         area_rollup_html = f"""
         <section>
           <h2>Area Evidence Rollup</h2>
           <p><strong>Listings with area context:</strong> {escape(str(rollup.get('listings_with_area_context', 0)))}</p>
           <p><strong>Total evidence items:</strong> {escape(str(rollup.get('total_evidence_items', 0)))}</p>
           <p><strong>Total area warnings:</strong> {escape(str(rollup.get('total_area_warnings', 0)))}</p>
+          <p><strong>Confidence band:</strong> {confidence_band}</p>
+          <p><strong>Confidence note:</strong> {confidence_reason}</p>
           <p><strong>By source:</strong> {by_source_text}</p>
         </section>
         """
@@ -175,11 +179,12 @@ def _warnings(payload: ExportPayload) -> list[str]:
   if isinstance(rollup, dict):
     total = int(rollup.get("total_evidence_items", 0) or 0)
     listings = int(rollup.get("listings_with_area_context", 0) or 0)
+    confidence_band = str(rollup.get("confidence_band", "unknown"))
     by_source = rollup.get("evidence_by_source")
     by_source_text = ""
     if isinstance(by_source, dict) and by_source:
       by_source_text = ", ".join([f"{k}={v}" for k, v in sorted(by_source.items())])
-    warning = f"Area evidence rollup: {total} evidence items across {listings} listings"
+    warning = f"Area evidence rollup: {total} evidence items across {listings} listings [confidence={confidence_band}]"
     if by_source_text:
       warning = f"{warning} ({by_source_text})."
     else:

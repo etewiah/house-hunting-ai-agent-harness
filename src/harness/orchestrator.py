@@ -119,13 +119,36 @@ class HouseHuntOrchestrator:
                 source_counter[str(evidence.source)] += 1
                 category_counter[str(evidence.category)] += 1
 
+        listing_count_considered = len(considered)
+        coverage_ratio = (
+            listings_with_area / listing_count_considered if listing_count_considered > 0 else 0.0
+        )
+        estimated_count = int(source_counter.get("estimated", 0))
+        estimated_ratio = estimated_count / total_evidence if total_evidence > 0 else 0.0
+        if total_evidence == 0 or listings_with_area == 0:
+            confidence_band = "low"
+            confidence_reason = "No area evidence available for ranked listings."
+        elif coverage_ratio >= 0.75 and total_evidence >= 4 and estimated_ratio <= 0.60:
+            confidence_band = "high"
+            confidence_reason = "Most ranked listings include multi-source area evidence."
+        elif coverage_ratio >= 0.40 and total_evidence >= 2:
+            confidence_band = "medium"
+            confidence_reason = "Some ranked listings include area evidence, but coverage is partial."
+        else:
+            confidence_band = "low"
+            confidence_reason = "Area evidence coverage is sparse or heavily estimated."
+
         return {
-            "listing_count_considered": len(considered),
+            "listing_count_considered": listing_count_considered,
             "listings_with_area_context": listings_with_area,
             "total_evidence_items": total_evidence,
             "total_area_warnings": total_warnings,
             "evidence_by_source": dict(source_counter),
             "top_categories": dict(category_counter.most_common(5)),
+            "coverage_ratio": round(coverage_ratio, 3),
+            "estimated_ratio": round(estimated_ratio, 3),
+            "confidence_band": confidence_band,
+            "confidence_reason": confidence_reason,
         }
 
     def intake(self, brief: str) -> BuyerProfile:

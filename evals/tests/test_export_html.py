@@ -181,6 +181,8 @@ def test_html_export_renders_area_rollup_when_present(tmp_path):
                 "listings_with_area_context": 2,
                 "total_evidence_items": 3,
                 "total_area_warnings": 1,
+                "confidence_band": "medium",
+                "confidence_reason": "Some ranked listings include area evidence, but coverage is partial.",
                 "evidence_by_source": {"estimated": 2, "listing_provided": 1},
             }
         },
@@ -191,5 +193,8 @@ def test_html_export_renders_area_rollup_when_present(tmp_path):
     html = output_path.read_text(encoding="utf-8")
     assert "Area Evidence Rollup" in html
     assert "Total evidence items:" in html
+    assert "Confidence band:" in html
+    assert "medium" in html
     assert "estimated=2" in html
     assert any("Area evidence rollup: 3 evidence items across 2 listings" in w for w in result.warnings)
+    assert any("confidence=medium" in w for w in result.warnings)

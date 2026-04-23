@@ -140,6 +140,9 @@ def _print_area_evidence_rollup(rollup: dict[str, object]) -> None:
     print(f"- listings with area context: {rollup.get('listings_with_area_context', 0)}")
     print(f"- total evidence items: {rollup.get('total_evidence_items', 0)}")
     print(f"- total area warnings: {rollup.get('total_area_warnings', 0)}")
+    print(f"- confidence band: {rollup.get('confidence_band', 'unknown')}")
+    if rollup.get("confidence_reason"):
+        print(f"- confidence note: {rollup.get('confidence_reason')}")
     by_source = rollup.get("evidence_by_source")
     if isinstance(by_source, dict) and by_source:
         rendered = ", ".join([f"{key}={value}" for key, value in sorted(by_source.items())])

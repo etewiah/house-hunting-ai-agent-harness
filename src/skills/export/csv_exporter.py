@@ -102,11 +102,12 @@ def _warnings(payload: ExportPayload) -> list[str]:
     if isinstance(rollup, dict):
         total = int(rollup.get("total_evidence_items", 0) or 0)
         listings = int(rollup.get("listings_with_area_context", 0) or 0)
+        confidence_band = str(rollup.get("confidence_band", "unknown"))
         by_source = rollup.get("evidence_by_source")
         by_source_text = ""
         if isinstance(by_source, dict) and by_source:
             by_source_text = ", ".join([f"{k}={v}" for k, v in sorted(by_source.items())])
-        warning = f"Area evidence rollup: {total} evidence items across {listings} listings"
+        warning = f"Area evidence rollup: {total} evidence items across {listings} listings [confidence={confidence_band}]"
         if by_source_text:
             warning = f"{warning} ({by_source_text})."
         else:

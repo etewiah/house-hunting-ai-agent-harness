@@ -237,6 +237,7 @@ def test_csv_export_includes_area_rollup_warning_when_present(tmp_path):
             "area_evidence_rollup": {
                 "total_evidence_items": 3,
                 "listings_with_area_context": 2,
+                "confidence_band": "medium",
                 "evidence_by_source": {"estimated": 2, "listing_provided": 1},
             }
         },
@@ -246,4 +247,5 @@ def test_csv_export_includes_area_rollup_warning_when_present(tmp_path):
 
     joined = " ".join(result.warnings)
     assert "Area evidence rollup: 3 evidence items across 2 listings" in joined
+    assert "confidence=medium" in joined
     assert "estimated=2" in joined
