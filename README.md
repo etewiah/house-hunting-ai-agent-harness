@@ -46,6 +46,49 @@ setup.
 For agent-facing instructions, see [AGENTS.md](AGENTS.md).
 For Codex skill discovery, see [.codex/skills/run-house-hunt/SKILL.md](.codex/skills/run-house-hunt/SKILL.md).
 For a consolidated browser-first progress + usage guide, see [docs/browser-assisted-guide.md](docs/browser-assisted-guide.md).
+For a chronological browser-first change log, see [docs/browser-assisted-changelog.md](docs/browser-assisted-changelog.md).
+
+## Using With Pi
+
+This repo now has a project-local Pi skill and Pi extension for browser-assisted house hunting.
+
+### What Pi can do here
+
+When you run Pi inside this repo, it can:
+- search the web for listing URLs
+- extract listing pages into normalized data
+- attach extraction diagnostics and quality scores
+- heuristically enrich missing commute times
+- run the Python harness on browser-found or user-supplied listings
+- export results to HTML and CSV
+
+### Pi quick start
+
+Start Pi in this repo, then run:
+
+```text
+/reload
+/skill:browser-house-hunt
+```
+
+Fastest path:
+- use `house_hunt_from_web` for the one-shot browser flow
+
+More controlled path:
+- `property_web_search`
+- `extract_property_listings`
+- `run_house_hunt_harness`
+
+Smoke test command:
+
+```text
+/house-hunt-smoke 2-bed flat near Birmingham New Street, under £250k, parking preferred
+```
+
+Pi-specific docs:
+- `.pi/extensions/house-hunt-browser/README.md`
+- `.pi/skills/browser-house-hunt/SKILL.md`
+- `docs/browser-assisted-guide.md`
 
 Useful direct entry points:
 
