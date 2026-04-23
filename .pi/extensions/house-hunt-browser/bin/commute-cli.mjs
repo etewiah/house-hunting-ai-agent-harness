@@ -8,8 +8,12 @@
  *   echo '[{...listing...}]' | node commute-cli.mjs --brief "3-bed near London" --mode transit
  *   echo '[{...listing...}]' | node commute-cli.mjs --destination "London" --mode transit
  *
- * Returns JSON array to stdout:
- *   [{...enriched listing...}, ...]
+ *   # Infer destination from brief without enriching (no stdin needed):
+ *   node commute-cli.mjs --brief "3-bed near London" --infer-only
+ *
+ * Returns JSON array to stdout (or a JSON string for --infer-only):
+ *   [{...enriched listing...}, ...]   # normal mode
+ *   "London"                          # --infer-only mode (null if no destination found)
  */
 
 import { stdin } from 'process';
@@ -20,6 +24,7 @@ async function main() {
   let brief = null;
   let destination = null;
   let mode = 'transit';
+  let inferOnly = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--brief') {
@@ -28,7 +33,16 @@ async function main() {
       destination = args[++i];
     } else if (args[i] === '--mode') {
       mode = args[++i];
+    } else if (args[i] === '--infer-only') {
+      inferOnly = true;
     }
+  }
+
+  // --infer-only: print the inferred destination and exit (no stdin required)
+  if (inferOnly) {
+    const inferred = brief ? inferCommuteDestinationFromBrief(brief) : null;
+    console.log(JSON.stringify(inferred));
+    return;
   }
 
   // Read listings from stdin

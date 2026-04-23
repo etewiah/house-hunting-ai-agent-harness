@@ -145,6 +145,40 @@ def test_commute_enrichment_returns_list_with_destination():
 
 
 # ---------------------------------------------------------------------------
+# infer_commute_destination_from_brief
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "brief,expected",
+    [
+        ("3-bed near Surbiton, max 45 min commute to Waterloo", "Surbiton"),
+        ("2-bed flat near Birmingham New Street, under £250k", "Birmingham New Street"),
+        ("4-bed house within 30 minutes of Kings Cross", "Kings Cross"),
+        ("2-bed with garden and parking", None),  # no destination signal
+        ("", None),
+    ],
+)
+def test_infer_commute_destination_from_brief(brief, expected):
+    from src.skills.browser_extraction import infer_commute_destination_from_brief
+
+    result = infer_commute_destination_from_brief(brief)
+    assert result == expected
+
+
+def test_infer_commute_destination_not_none_for_recognisable_brief():
+    """Regression: this previously always returned None due to the stub."""
+    from src.skills.browser_extraction import infer_commute_destination_from_brief
+
+    result = infer_commute_destination_from_brief(
+        "3-bed near London Bridge, budget £650k"
+    )
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
 # Fixture-based parser tests (mirrors Node manifest.mjs)
 # ---------------------------------------------------------------------------
 

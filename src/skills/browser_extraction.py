@@ -271,23 +271,22 @@ def infer_commute_destination_from_brief(brief: str) -> str | None:
     Infer a commute destination from a buyer brief string.
 
     Examples:
-        "3-bed near London" → "London"
+        "3-bed near Surbiton, commute to Waterloo" → "Surbiton"
         "max 45 min commute to Waterloo" → "Waterloo"
+        "2-bed with garden" → None (no destination recognisable)
     """
     try:
-        # Call commute-cli.mjs with --brief to infer destination
-        cmd = ["node", str(COMMUTE_CLI), "--brief", brief]
         result = subprocess.run(
-            cmd,
-            input=b"[]",  # dummy listings
+            ["node", str(COMMUTE_CLI), "--brief", brief, "--infer-only"],
             capture_output=True,
             timeout=5,
             check=False,
         )
-        # The CLI doesn't directly support --brief output yet; for now, return None
-        # This is a hook for Tier 2 enhancement.
-        return None
-    except Exception:
+        if result.returncode != 0:
+            return None
+        value = json.loads(result.stdout.decode("utf-8").strip())
+        return value if isinstance(value, str) else None
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
         return None
 
 
@@ -320,6 +319,13 @@ def house_hunt_from_web(
           - filtered_out_low_quality: list of filtered dicts with quality score
     """
     sites = sites or DEFAULT_LISTING_SITES
+
+    # Auto-infer commute destination from brief when not explicitly provided
+    commute_destination_inferred = False
+    if commute_destination is None:
+        commute_destination = infer_commute_destination_from_brief(brief)
+        if commute_destination is not None:
+            commute_destination_inferred = True
 
     # Step 1: Search
     try:
@@ -396,6 +402,7 @@ def house_hunt_from_web(
         "average_quality": average_quality,
         "filtered_out_low_quality": filtered_out,
         "commute_destination": commute_destination,
+        "commute_destination_inferred": commute_destination_inferred,
         "commute_mode": commute_mode,
         "min_quality_score": min_quality_score,
     }

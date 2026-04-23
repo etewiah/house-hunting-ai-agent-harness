@@ -322,6 +322,7 @@ def house_hunt_from_web(
         "average_quality": result.get("average_quality", 0),
         "filtered_out_low_quality": result.get("filtered_out_low_quality", []),
         "commute_destination": result.get("commute_destination"),
+        "commute_destination_inferred": result.get("commute_destination_inferred", False),
         "commute_mode": result.get("commute_mode"),
         "min_quality_score": result.get("min_quality_score"),
     }
