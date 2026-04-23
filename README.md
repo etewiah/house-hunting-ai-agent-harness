@@ -54,6 +54,7 @@ Key docs:
 - `docs/README.md` — documentation map
 - `docs/browser-assisted-guide.md` — browser-first and Pi usage guide
 - `docs/browser-assisted-changelog.md` — chronological change log
+- `docs/mcp-usage.md` — optional MCP server usage guide
 - `.pi/extensions/house-hunt-browser/README.md` — Pi extension details
 - `.pi/skills/browser-house-hunt/SKILL.md` — Pi skill instructions
 
@@ -204,6 +205,8 @@ examples are `H2CListingConnector` and `LocalCsvListingConnector`.
 
 The MCP server is optional. It is useful for clients that need MCP tool discovery and
 tool calls, but coding agents can usually use the repo directly.
+
+For a dedicated MCP walkthrough, see `docs/mcp-usage.md`.
 
 To start it manually:
 

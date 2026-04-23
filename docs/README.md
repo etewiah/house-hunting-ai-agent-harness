@@ -26,6 +26,8 @@ If you are trying to understand the project quickly, read these first:
   - what behavior the eval suite is meant to cover
 - `roadmap.md`
   - current implementation status, near-term priorities, and later ideas
+- `mcp-usage.md`
+  - how to use the optional MCP server and which MCP tools to call
 
 ## Integration and provider docs
 
@@ -64,6 +66,7 @@ If you are trying to understand the project quickly, read these first:
 ### I want to integrate another client or provider
 - `connectors.md`
 - `providers.md`
+- `mcp-usage.md`
 - `INTEGRATION_UPDATES.md`
 
 ### I want to understand the architecture

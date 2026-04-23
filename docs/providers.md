@@ -109,5 +109,7 @@ The MCP server (`uv run house-hunt serve`) is optional. It uses the same provide
 detection as the CLI. Set the same environment variables before starting the server if
 your MCP client needs model-backed tools.
 
+For MCP-specific usage patterns and tool selection, see `mcp-usage.md`.
+
 Coding agents can usually use the repository directly without MCP by importing modules,
 running the CLI, or calling the eval suite.
