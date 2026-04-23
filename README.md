@@ -38,7 +38,7 @@ Questions to ask on the tour:
 
 ## Using With Coding Agents
 
-The harness is designed so coding agents such as Codex or Claude Code can use it
+The harness is designed so coding agents such as [Codex](https://openai.com/codex) or [Claude Code](https://www.anthropic.com/claude-code) can use it
 directly from the repository. An agent can read the docs, inspect the Python modules, run
 the CLI, call functions from `src/skills/`, and run the eval suite without any server
 setup.
@@ -60,11 +60,11 @@ Key docs:
 
 ## Using With Pi
 
-This repo now has a project-local Pi skill and Pi extension for browser-assisted house hunting.
+This repo now has a project-local [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent) skill and Pi extension for browser-assisted house hunting.
 
 ### What Pi can do here
 
-When you run Pi inside this repo, it can:
+When you run [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent) inside this repo, it can:
 - search the web for listing URLs
 - extract listing pages into normalized data
 - attach extraction diagnostics and quality scores
@@ -140,8 +140,7 @@ uv run house-hunt
 
 The standalone CLI needs a listing provider for direct search. Set `H2C_READ_KEY` for HomesToCompare search, or
 set `LISTINGS_CSV_PATH` to a CSV export with `Listing` fields. In coding-agent workflows,
-the listing provider is optional: the agent can find listings with browser tools or other
-sources, normalize them into `Listing` objects, and pass them into the harness for ranking,
+the listing provider is optional: an agent such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent), [Claude Code](https://www.anthropic.com/claude-code), or [Codex](https://openai.com/codex) can use its own browser or search tools to find listings, normalize them into `Listing` objects, and pass them into the harness for ranking,
 comparison, explanation, and export. Without an LLM key, intake falls back to regex parsing.
 
 ```bash
@@ -248,6 +247,6 @@ The agent will never present itself as a lawyer, mortgage adviser, surveyor, ins
 
 ## v0.1 scope
 
-Included: CLI, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, and connector stubs.
+Included: CLI, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, connector stubs, and browser-assisted workflows via agent integrations such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent), [Claude Code](https://www.anthropic.com/claude-code), and [Codex](https://openai.com/codex).
 
-Not included: autonomous browsing, negotiation automation, legal or mortgage advice, transaction management.
+Not included in the core harness: a built-in standalone autonomous browser agent, negotiation automation, legal or mortgage advice, transaction management.
