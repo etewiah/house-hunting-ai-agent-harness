@@ -100,6 +100,26 @@ def _print_acquisition_summary(summary: dict[str, object]) -> None:
     print()
 
 
+def _print_area_context_summary(summary: dict[str, object]) -> None:
+    print("Area context summary:\n")
+    if not summary:
+        print("  (no area context summary available)\n")
+        return
+    print(f"  - listings considered: {summary.get('listing_count_considered', 0)}")
+    print(f"  - listings with area context: {summary.get('listings_with_area_context', 0)}")
+    items = summary.get("items")
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("title", "unknown")
+            evidence_count = item.get("evidence_count", 0)
+            categories = item.get("categories")
+            categories_text = ", ".join(categories) if isinstance(categories, list) else ""
+            print(f"  - {title}: evidence={evidence_count}, categories={categories_text}")
+    print()
+
+
 def run_interactive() -> None:
     print(_WELCOME)
 
@@ -184,6 +204,7 @@ def run_interactive() -> None:
     print(f"\n{next_steps['boundary']}\n")
 
     _print_acquisition_summary(app.get_acquisition_summary())
+    _print_area_context_summary(app.get_area_context_summary())
     _print_pipeline_summary(app.get_pipeline_status())
 
     trace_path = app.tracer.flush("session")

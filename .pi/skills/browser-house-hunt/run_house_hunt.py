@@ -108,6 +108,28 @@ def _print_acquisition_summary(summary: dict[str, object]) -> None:
     print()
 
 
+def _print_area_context_summary(summary: dict[str, object]) -> None:
+    print("## Area Context Summary")
+    if not summary:
+        print("No area context summary available.")
+        print()
+        return
+    print(f"- listings considered: {summary.get('listing_count_considered', 0)}")
+    print(f"- listings with area context: {summary.get('listings_with_area_context', 0)}")
+    items = summary.get("items")
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            categories = item.get("categories")
+            categories_text = ", ".join(categories) if isinstance(categories, list) else ""
+            print(
+                f"- {item.get('title', 'unknown')}: evidence={item.get('evidence_count', 0)}, "
+                f"categories={categories_text}"
+            )
+    print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the house-hunt harness on supplied listing JSON.")
     parser.add_argument("--brief", required=True, help="Buyer brief in plain English.")
@@ -146,6 +168,7 @@ def main() -> None:
     print()
 
     _print_acquisition_summary(app.get_acquisition_summary())
+    _print_area_context_summary(app.get_area_context_summary())
     _print_pipeline_summary(app.get_pipeline_status())
 
     if next_steps is not None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from src.app import build_app
 from src.harness.orchestrator import HouseHuntOrchestrator
-from src.models.schemas import Listing
+from src.models.schemas import AreaData, AreaEvidence, Listing
 
 
 def _listing(
@@ -216,3 +216,55 @@ def test_acquisition_summary_tracks_exclusion_reasons(tmp_path):
     assert summary["exclusion_reasons"]["location_filter"] == 1
     assert summary["exclusion_reasons"]["requirement_filters"] == 1
     assert summary["exclusion_reasons"]["rank_limit"] == 0
+
+
+def test_area_context_summary_reports_ranked_listings_with_evidence(tmp_path):
+    app = HouseHuntOrchestrator(listings=None, trace_dir=str(tmp_path))
+    app.intake("2-bed flat near Birmingham New Street, under £250k")
+
+    with_area = _listing(
+        "with_area",
+        "Area Context Flat",
+        235_000,
+        2,
+        "Birmingham",
+        15,
+        ["parking"],
+    )
+    with_area = Listing(
+        id=with_area.id,
+        title=with_area.title,
+        price=with_area.price,
+        bedrooms=with_area.bedrooms,
+        bathrooms=with_area.bathrooms,
+        location=with_area.location,
+        commute_minutes=with_area.commute_minutes,
+        features=with_area.features,
+        description=with_area.description,
+        source_url=with_area.source_url,
+        area_data=AreaData(
+            listing_id="with_area",
+            evidence=[
+                AreaEvidence(
+                    category="schools",
+                    summary="Two schools rated good nearby",
+                    source_name="Ofsted",
+                    source="estimated",
+                    retrieved_at="2026-04-23T12:00:00Z",
+                )
+            ],
+        ),
+    )
+
+    app.triage_listings(
+        [
+            with_area,
+            _listing("no_area", "No Area Flat", 220_000, 2, "Birmingham", 13, ["parking"]),
+        ]
+    )
+
+    summary = app.get_area_context_summary(max_listings=5)
+    assert summary["listing_count_considered"] == 2
+    assert summary["listings_with_area_context"] == 1
+    assert summary["items"][0]["listing_id"] == "with_area"
+    assert "schools" in summary["items"][0]["categories"]

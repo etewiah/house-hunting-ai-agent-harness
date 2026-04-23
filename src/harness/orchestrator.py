@@ -65,6 +65,39 @@ class HouseHuntOrchestrator:
     def get_acquisition_summary(self) -> dict[str, object]:
         return dict(self.state.acquisition_summary)
 
+    def get_area_context_summary(self, max_listings: int = 5) -> dict[str, object]:
+        considered = self.state.ranked_listings[:max_listings]
+        items: list[dict[str, object]] = []
+        for ranked in considered:
+            listing = ranked.listing
+            if listing.area_data is None or not listing.area_data.evidence:
+                continue
+            evidence = listing.area_data.evidence
+            categories = list(dict.fromkeys([item.category for item in evidence]))
+            top_evidence = [
+                {
+                    "category": item.category,
+                    "source": item.source,
+                    "summary": item.summary,
+                }
+                for item in evidence[:2]
+            ]
+            items.append(
+                {
+                    "listing_id": listing.id,
+                    "title": listing.title,
+                    "evidence_count": len(evidence),
+                    "categories": categories[:5],
+                    "warning_count": len(listing.area_data.warnings),
+                    "top_evidence": top_evidence,
+                }
+            )
+        return {
+            "listing_count_considered": len(considered),
+            "listings_with_area_context": len(items),
+            "items": items,
+        }
+
     def intake(self, brief: str) -> BuyerProfile:
         self._set_pipeline_stage("intake.started", "Parsing buyer brief")
         profile = parse_buyer_brief(brief, llm=self.llm)
@@ -248,6 +281,7 @@ class HouseHuntOrchestrator:
             ranked_listings=self.state.ranked_listings,
             generated_outputs={
                 "acquisition_summary": self.state.acquisition_summary,
+                "area_context_summary": self.get_area_context_summary(max_listings=options.max_listings),
                 "pipeline_status": self.get_pipeline_status(),
             },
             session_id=self.state.session.session_id if self.state.session is not None else None,
