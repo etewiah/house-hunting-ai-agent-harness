@@ -32,6 +32,35 @@ def _browser_style_rank_inputs():
     ]
 
 
+def _browser_style_rank_inputs_with_area_context():
+    return [
+        {
+            "id": "best",
+            "title": "Station Quarter Flat",
+            "price": "£235,000",
+            "bedrooms": "2 bedrooms",
+            "bathrooms": "1 bathroom",
+            "location": "Birmingham",
+            "commute_minutes": "15 min",
+            "features": "parking",
+            "description": "",
+            "source_url": "https://example.com/best",
+            "area_data": {
+                "evidence": [
+                    {
+                        "category": "schools",
+                        "summary": "Two schools rated good nearby",
+                        "source_name": "Ofsted",
+                        "source": "estimated",
+                        "retrieved_at": "2026-04-23T12:00:00Z",
+                    }
+                ],
+                "warnings": ["school distance estimated"],
+            },
+        }
+    ]
+
+
 def test_mcp_rank_listings_accepts_browser_style_string_fields():
     ranked = mcp_server.rank_listings(
         "2-bed flat near Birmingham New Street, under £250k, max 25 min commute, parking preferred",
@@ -52,14 +81,27 @@ def test_mcp_run_house_hunt_returns_structured_browser_first_workflow():
     assert result["buyer_profile"]["max_budget"] == 250000
     assert "acquisition_summary" in result
     assert "area_context_summary" in result
+    assert "area_evidence_rollup" in result
     assert result["acquisition_summary"]["candidate_count"] == 2
     assert result["area_context_summary"]["listing_count_considered"] >= 1
     assert result["area_context_summary"]["listings_with_area_context"] == 0
+    assert result["area_evidence_rollup"]["total_evidence_items"] == 0
     assert result["ranked_listings"][0]["listing"]["id"] == "best"
     assert result["explanations"]
     assert "Boundary:" in result["comparison"]
     assert result["next_steps"]["affordability"]["listing_id"] == "best"
     assert "negotiation advice" in result["next_steps"]["boundary"]
+
+
+def test_mcp_run_house_hunt_rolls_up_area_evidence_when_present():
+    result = mcp_server.run_house_hunt(
+        "2-bed flat near Birmingham New Street, under £250k",
+        _browser_style_rank_inputs_with_area_context(),
+    )
+
+    assert result["area_context_summary"]["listings_with_area_context"] == 1
+    assert result["area_evidence_rollup"]["total_evidence_items"] == 1
+    assert result["area_evidence_rollup"]["evidence_by_source"]["estimated"] == 1
 
 
 def test_mcp_export_csv_respects_max_listings(tmp_path):

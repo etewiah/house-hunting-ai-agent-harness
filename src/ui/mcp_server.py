@@ -105,6 +105,7 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
         "buyer_profile": asdict(profile),
         "acquisition_summary": app.get_acquisition_summary(),
         "area_context_summary": app.get_area_context_summary(max_listings=limit),
+        "area_evidence_rollup": app.get_area_evidence_rollup(max_listings=limit),
         "triage_warnings": app.state.triage_warnings,
         "ranked_listings": [_serialize_ranked_listing(item) for item in ranked],
         "explanations": explanations,
