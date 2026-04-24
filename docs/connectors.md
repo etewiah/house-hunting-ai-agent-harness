@@ -8,7 +8,12 @@ shape of the harness.
 ### Listing providers
 - `src/connectors/homestocompare_connector.py`
   - HomesToCompare-backed listing search adapter
-  - also includes comparison creation support for top-ranked listings
+  - also includes legacy service-key comparison creation support
+- `src/connectors/homestocompare_public_connector.py`
+  - public HomesToCompare comparison publishing adapter
+  - posts complete, verified listing payloads to `/api/create-comparison`
+- `src/connectors/homestocompare_mapper.py`
+  - maps harness `Listing` objects into the H2C scraper-style property payload
 - `src/connectors/local_csv.py`
   - CSV-backed listing source adapter for explicit local datasets
 
@@ -31,6 +36,10 @@ A listing connector should expose:
 Comparison-capable connectors may also expose operations such as:
 - `create_comparison(listings)`
 - `create_comparison(left_url, right_url)`
+
+Browser-assisted H2C publishing uses complete `Listing` objects, not URL-only creation,
+because the harness is responsible for finding and verifying photos before H2C receives
+the payload.
 
 ## Design expectations
 

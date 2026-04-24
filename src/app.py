@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from src.config import load_config
-from src.connectors.homestocompare_connector import H2CListingConnector, HomesToCompareConnector
+from src.connectors.homestocompare_connector import H2CListingConnector
+from src.connectors.homestocompare_public_connector import HomesToComparePublicConnector
 from src.connectors.local_csv import LocalCsvListingConnector
 from src.connectors.provider_factory import load_llm
 from src.harness.orchestrator import HouseHuntOrchestrator
@@ -11,10 +12,9 @@ from src.models.capabilities import ListingProvider
 def build_app() -> HouseHuntOrchestrator:
     config = load_config()
     listings = _load_listing_provider(config)
-    h2c_connector = (
-        HomesToCompareConnector(config.h2c_base_url, config.h2c_service_key)
-        if config.h2c_service_key
-        else None
+    h2c_connector = HomesToComparePublicConnector(
+        config.h2c_base_url,
+        visitor_session=config.h2c_visitor_session,
     )
     llm = load_llm()
     return HouseHuntOrchestrator(

@@ -1,5 +1,11 @@
 # Agent Harness — Updates Required for HomesToCompare Integration
 
+> Historical note: this document predates the verified public H2C publishing flow.
+> Browser-assisted comparison publishing now uses the public `/api/create-comparison`
+> path through `HomesToComparePublicConnector`, with verified photo validation in the
+> harness. Do not use the older `H2C_SERVICE_KEY` guidance here for current
+> browser-assisted H2C publishing work.
+
 **Scope:** Changes inside `house-hunting-ai-agent-harness/` needed to support deep integration with the HomesToCompare TypeScript application, maintain the harness as a useful standalone reference, and evolve it toward v0.2.
 
 ## Status note

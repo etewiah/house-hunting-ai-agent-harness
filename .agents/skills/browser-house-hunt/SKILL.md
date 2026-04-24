@@ -15,6 +15,7 @@ This skill treats **web discovery** and **harness evaluation** as separate steps
 2. normalize each listing into the repo's `Listing` shape
 3. run the harness pipeline using those supplied listings via the `house-hunt` MCP server
 4. report ranked matches, explanations, comparison, affordability, tour prep, and next steps
+5. when the user expects a HomesToCompare link, publish only after verified photos are present
 
 If the `house-hunt` MCP server is not available, fall back to the existing `run-house-hunt` skill (which calls `build_app()` directly without discovery).
 
@@ -70,7 +71,7 @@ Each candidate listing should become a JSON object with these fields:
 
 ### Optional fields
 
-- **`image_urls`** (optional, list of strings or string): image URL(s) from the listing, if you captured them. Not required; useful for diagnostics.
+- **`image_urls`** (optional for ranking, required for H2C publishing): image URL(s) observed on the listing page. Do not invent URL patterns. If the output will be a HomesToCompare comparison, every selected listing must have verified images and `external_refs.photo_extraction.status == "verified"`.
 - **`external_refs`** (optional, object): any metadata you want to carry through (for example, extraction quality, parser used, commute source). The harness will preserve this in downstream outputs.
 
 ## Workflow
@@ -114,6 +115,7 @@ For each page you fetched, extract the fields listed above into a JSON object. K
 - Normalize bedroom/bathroom counts to integers.
 - Extract feature keywords from the text; do not guess.
 - If commute time is not on the page, leave `commute_minutes` null rather than inventing an estimate.
+- If the user expects a HomesToCompare comparison link, extract all available listing photos from observed page data and verify them before publishing.
 
 After normalizing, save the listing JSON array to a temp file:
 
@@ -168,6 +170,7 @@ Summarize clearly:
 - **Offer brief** — points to consider when making an offer on the top match
 - **Boundary notice** — the harness's disclaimer about advice limits
 - **Trace path** — path to any exported files or trace data
+- **HomesToCompare URL** — only if publishing succeeded with verified submitted photos. If H2C publishing fails validation, report the specific missing or unverified fields instead of returning an incomplete comparison.
 
 ## Guardrails
 
@@ -177,6 +180,7 @@ Summarize clearly:
 - Keep source URLs for every listing so the user can verify.
 - If you could not extract commute time from a page, leave it null rather than inventing it (unless you used a heuristic commute estimator, which should be marked as estimated).
 - If a site blocks your access, say so and move to another source.
+- Never hallucinate listing photo URLs. Use only URLs observed in page HTML, page state, JSON-LD, DOM images, browser performance entries, network responses, or an API response actually fetched during the session.
 
 ## Troubleshooting
 

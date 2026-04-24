@@ -20,6 +20,7 @@ single-country or single-platform product plan.
 - [04 - Persistent Sessions](04-persistent-sessions.md)
 - [05 - Listing Image Analysis](05-image-analysis.md)
 - [06 - Session Export](06-export.md)
+- [07 - Verified H2C Comparison Publishing](07-h2c-verified-comparison-publishing.md)
 
 ## Integration Notes
 

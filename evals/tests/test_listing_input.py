@@ -28,6 +28,26 @@ def test_listing_from_dict_coerces_common_browser_string_fields():
     assert listing.external_refs["extraction_quality_score"] == 80
 
 
+def test_listing_from_dict_coerces_scraper_style_image_url_objects():
+    listing = listing_from_dict(
+        {
+            "id": "listing-objects",
+            "title": "Example home",
+            "price": "£250,000",
+            "bedrooms": "3",
+            "bathrooms": "1",
+            "location": "Birmingham",
+            "source_url": "https://example.com/listing",
+            "image_urls": [
+                {"url": "https://example.com/a.jpg"},
+                {"url": "https://example.com/b.jpg"},
+            ],
+        }
+    )
+
+    assert listing.image_urls == ["https://example.com/a.jpg", "https://example.com/b.jpg"]
+
+
 def test_listing_from_dict_handles_missing_or_invalid_collection_fields():
     listing = listing_from_dict(
         {

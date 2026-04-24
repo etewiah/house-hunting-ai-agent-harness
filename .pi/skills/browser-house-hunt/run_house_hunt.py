@@ -160,6 +160,11 @@ def main() -> None:
     parser.add_argument("--listings-file", required=True, help="Path to JSON array of normalized listings.")
     parser.add_argument("--export-html", help="Optional HTML export path.")
     parser.add_argument("--export-csv", help="Optional CSV export path.")
+    parser.add_argument(
+        "--publish-h2c",
+        action="store_true",
+        help="Publish the top two verified-photo listings to HomesToCompare.",
+    )
     args = parser.parse_args()
 
     candidates = _load_candidates(args.listings_file)
@@ -195,6 +200,24 @@ def main() -> None:
     _print_area_context_summary(app.get_area_context_summary())
     _print_area_evidence_rollup(app.get_area_evidence_rollup())
     _print_pipeline_summary(app.get_pipeline_status())
+
+    if args.publish_h2c:
+        print("## HomesToCompare")
+        h2c_result = app.create_comparison(count=2)
+        print(f"- Status: {h2c_result.get('status')}")
+        if h2c_result.get("overview_url"):
+            print(f"- Overview: {h2c_result.get('overview_url')}")
+        if h2c_result.get("photos_url"):
+            print(f"- Photos: {h2c_result.get('photos_url')}")
+        if h2c_result.get("photos_submitted") is not None:
+            print(f"- Photos submitted: {h2c_result.get('photos_submitted')}")
+        warnings = h2c_result.get("warnings")
+        if isinstance(warnings, list) and warnings:
+            print(f"- Warnings: {', '.join(str(item) for item in warnings)}")
+        errors = h2c_result.get("errors")
+        if isinstance(errors, list) and errors:
+            print(f"- Errors: {', '.join(str(item) for item in errors)}")
+        print()
 
     if next_steps is not None:
         affordability = next_steps["affordability"]

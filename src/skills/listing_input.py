@@ -19,7 +19,7 @@ def listing_from_dict(data: dict[str, object]) -> Listing:
         description=str(data.get("description", "")),
         source_url=str(data.get("source_url", "")),
         area_data=_coerce_area_data(data.get("area_data"), listing_id=str(data.get("id", ""))),
-        image_urls=_coerce_string_list(data.get("image_urls")),
+        image_urls=_coerce_image_urls(data.get("image_urls")),
         decision_details=_coerce_decision_details(data.get("decision_details")),
         external_refs=_coerce_dict(data.get("external_refs")),
     )
@@ -57,6 +57,29 @@ def _coerce_string_list(value: object) -> list[str]:
         return [value]
     if isinstance(value, Iterable):
         return [str(item) for item in value]
+    return [str(value)]
+
+
+def _coerce_image_urls(value: object) -> list[str]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        url = value.get("url")
+        return [url.strip()] if isinstance(url, str) and url.strip() else []
+    if isinstance(value, Iterable):
+        urls: list[str] = []
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                urls.append(item.strip())
+            elif isinstance(item, dict):
+                url = item.get("url")
+                if isinstance(url, str) and url.strip():
+                    urls.append(url.strip())
+            elif item not in (None, ""):
+                urls.append(str(item))
+        return urls
     return [str(value)]
 
 

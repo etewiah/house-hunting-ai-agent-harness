@@ -21,6 +21,7 @@ This skill treats **web discovery** and **harness evaluation** as separate steps
 2. normalize each listing into the repo's `Listing` shape
 3. run the harness pipeline using those supplied listings
 4. report ranked matches, explanations, comparison, affordability, and next steps
+5. publish to HomesToCompare only when the selected listings have verified photos
 
 When the extension is available, the fastest path is usually:
 1. call `house_hunt_from_web`
@@ -52,6 +53,9 @@ Notes:
 - `commute_minutes` may be `null` if unavailable
 - `features` should be short normalized strings like `parking`, `garden`, `walkable`, `quiet street`
 - keep the `source_url`
+- `image_urls` are optional for ranking but required for HomesToCompare publishing
+- never invent photo URLs; keep only URLs observed in page HTML, page state, JSON-LD, DOM images, network responses, or a fetched API response
+- when publishing to HomesToCompare, carry photo verification diagnostics under `external_refs.photo_extraction`
 - prefer factual data from the listing page over guessed values
 - if you have extraction or commute-estimation diagnostics, keep them under `external_refs`
 
@@ -124,6 +128,18 @@ uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
   --export-csv .tmp/house-hunt-report.csv
 ```
 
+HomesToCompare publishing:
+
+```bash
+uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
+  --brief "BRIEF_GOES_HERE" \
+  --listings-file .tmp/listings.json \
+  --publish-h2c
+```
+
+Only use `--publish-h2c` when the selected listings include verified photos. The harness
+will refuse to publish an H2C comparison if selected listings have no verified images.
+
 ### Step 5 — Report back to the user
 
 Summarize:
@@ -134,6 +150,7 @@ Summarize:
 - tour questions
 - offer-prep brief
 - trace path and export paths if generated
+- HomesToCompare overview/photos URL when publishing succeeded, or the validation errors when it did not
 
 ## Guardrails
 
@@ -142,6 +159,7 @@ Summarize:
 - Keep source URLs for every listing
 - If commute time was not explicitly retrieved, leave it null rather than inventing it unless the extension's heuristic commute enrichment is being used and clearly marked as estimated
 - If browser tools are blocked by a site, say so and move on to another source
+- Do not report an H2C comparison as complete when photos are missing or unverified
 
 ## Troubleshooting
 

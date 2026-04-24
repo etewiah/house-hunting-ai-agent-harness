@@ -13,6 +13,7 @@ from src.skills.export import ExportOrchestrator
 from src.skills.affordability import estimate_monthly_payment
 from src.skills.comparison import build_comparison_result, compare_ranked_homes
 from src.skills.explanation import explain_ranked_listing
+from src.skills.h2c_publish import publish_h2c_comparison
 from src.skills.intake import parse_buyer_brief
 from src.skills.listing_input import listing_from_dict
 from src.skills.listing_search import filter_by_location, filter_listings
@@ -349,10 +350,12 @@ class HouseHuntOrchestrator:
             return {"status": "skipped", "reason": f"Need at least {count} ranked listings to compare."}
         top = [item.listing for item in self.state.ranked_listings[:count]]
         comparison = self.compare_top_structured(count=count)
-        try:
-            result = self.h2c_connector.create_comparison(top, comparison=comparison)
-        except TypeError:
-            result = self.h2c_connector.create_comparison(top)
+        result = publish_h2c_comparison(
+            top,
+            comparison=comparison,
+            connector=self.h2c_connector,
+            verify_rendered_photos=True,
+        ).as_dict()
         self.tracer.record("comparison.created", result)
         return result
 

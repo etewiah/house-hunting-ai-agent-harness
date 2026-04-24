@@ -72,6 +72,18 @@ uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
   --export-csv .tmp/report.csv
 ```
 
+Optional HomesToCompare publishing:
+
+```bash
+uv run --extra dev python .pi/skills/browser-house-hunt/run_house_hunt.py \
+  --brief "2-bed investment property in Preston" \
+  --listings-file .tmp/listings.json \
+  --publish-h2c
+```
+
+Publishing requires verified photos on the selected listings. The harness refuses to
+publish an H2C comparison when the top listings have no verified photos.
+
 ## Pi extension capabilities
 
 Extension location:

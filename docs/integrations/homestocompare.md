@@ -6,10 +6,15 @@ data, and other platforms.
 
 ## Current Connector Surface
 
-The existing connector supports:
+The current H2C integration has separate read, legacy write, and public publish
+surfaces:
 
 - Reading listings through `H2CListingConnector.search(...)`.
-- Creating a comparison through `HomesToCompareConnector.create_comparison(...)`.
+- Publishing browser-assisted comparisons through
+  `HomesToComparePublicConnector.create_comparison(...)`, which calls the public
+  `/api/create-comparison` flow and does not require `H2C_SERVICE_KEY`.
+- The older `HomesToCompareConnector.create_comparison(...)` service-key path remains
+  in code for compatibility, but it is not the default browser-assisted publishing path.
 - Sending an optional structured comparison payload with the recommendation, trade-offs,
   deal-breakers, confidence, and verification checklist.
 
@@ -32,6 +37,9 @@ render as a buyer checklist.
 
 ## Possible Future Platform Capabilities
 
+- Publish browser-assisted comparisons through the public H2C comparison flow with
+  verified photos and post-publish render checks. See
+  [HomesToCompare Publishing Implementation Plan](homestocompare-publishing-implementation.md).
 - Read richer listing or comparison metadata from a machine-readable page or API.
 - Write optional enrichments back to H2C, such as commute estimates, area evidence,
   image observations, or comparison narratives.
