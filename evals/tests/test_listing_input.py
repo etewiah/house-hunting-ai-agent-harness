@@ -88,3 +88,33 @@ def test_listing_from_dict_coerces_area_data_evidence():
     assert len(listing.area_data.evidence) == 1
     assert listing.area_data.evidence[0].category == "schools"
     assert listing.area_data.warnings == ["school distance estimated"]
+
+
+def test_listing_from_dict_coerces_decision_details():
+    listing = listing_from_dict(
+        {
+            "id": "listing-4",
+            "title": "Leasehold flat",
+            "price": "£300,000",
+            "bedrooms": "2",
+            "bathrooms": "1",
+            "location": "Birmingham",
+            "commute_minutes": "20",
+            "features": ["parking"],
+            "description": "",
+            "source_url": "https://example.com/listing",
+            "decision_details": {
+                "tenure": {"value": "leasehold", "source": "listing_provided"},
+                "lease_years_remaining": {"value": 82, "source": "listing_provided"},
+                "service_charge_annual": {"value": 3600, "source": "listing_provided"},
+                "epc_rating": "C",
+                "notes": ["check lease pack"],
+            },
+        }
+    )
+
+    assert listing.decision_details is not None
+    assert listing.decision_details.tenure.value == "leasehold"
+    assert listing.decision_details.lease_years_remaining.value == 82
+    assert listing.decision_details.epc_rating.value == "C"
+    assert listing.decision_details.notes == ["check lease pack"]

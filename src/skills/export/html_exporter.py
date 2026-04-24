@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.harness.policies import advice_boundary_notice
 from src.models.schemas import ExportOptions, ExportPayload, ExportResult
+from src.skills.verification import verification_summary
 
 
 def export_html(
@@ -87,6 +88,17 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
         </section>
         """
 
+    verification_rollup_html = ""
+    verification_rollup = payload.generated_outputs.get("verification_rollup") if payload.generated_outputs else None
+    if isinstance(verification_rollup, dict):
+        verification_rollup_html = f"""
+        <section>
+          <h2>Verification Rollup</h2>
+          <p><strong>Total checks:</strong> {escape(str(verification_rollup.get('total_verification_items', 0)))}</p>
+          <p><strong>High priority:</strong> {escape(str(verification_rollup.get('high_priority_items', 0)))}</p>
+        </section>
+        """
+
     comparison_html = ""
     comparison = payload.generated_outputs.get("structured_comparison") if payload.generated_outputs else None
     if isinstance(comparison, dict) and comparison:
@@ -139,6 +151,7 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
     {profile_html}
     {acquisition_html}
     {area_rollup_html}
+    {verification_rollup_html}
     {comparison_html}
     <section>
       <h2>Ranked Listings</h2>
@@ -224,6 +237,11 @@ def _render_listing(index: int, item, include_area_data: bool = True) -> str:
             for item in top_evidence
         ]
         area_meta = f"<p><strong>Area context:</strong> {' | '.join(evidence_parts)}</p>"
+    verification = verification_summary(listing)
+    verification_meta = (
+        f"<p><strong>Verification:</strong> {verification['verification_count']} checks, "
+        f"{verification['high_priority_count']} high priority</p>"
+    )
     return f"""
       <article class="listing">
         <h3>{index}. {escape(listing.title)} ({item.score:.0f}/100)</h3>
@@ -235,6 +253,7 @@ def _render_listing(index: int, item, include_area_data: bool = True) -> str:
         {commute_meta}
         {area_meta}
         {extraction_quality}
+        {verification_meta}
         <p><a href="{escape(listing.source_url)}">Source listing</a></p>
       </article>
     """

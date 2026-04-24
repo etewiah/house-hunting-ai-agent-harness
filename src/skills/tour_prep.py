@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.models.schemas import Listing
+from src.skills.verification import generate_verification_items
 
 
 def generate_tour_questions(listing: Listing) -> list[str]:
@@ -14,4 +15,7 @@ def generate_tour_questions(listing: Listing) -> list[str]:
         questions.append("What is the garden orientation and drainage like after heavy rain?")
     if listing.commute_minutes is None:
         questions.append("What is the realistic door-to-door commute at peak time?")
+    for item in generate_verification_items(listing)[:5]:
+        if item.question not in questions:
+            questions.append(item.question)
     return questions

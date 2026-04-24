@@ -7,6 +7,7 @@ from src.models.schemas import (
     RankedListing,
     VerificationItem,
 )
+from src.skills.verification import generate_verification_items
 
 
 def build_comparison_result(
@@ -237,28 +238,7 @@ def _verification_items(items: list[RankedListing]) -> list[VerificationItem]:
     checks: list[VerificationItem] = []
     for item in items:
         listing = item.listing
-        if listing.commute_minutes is None:
-            checks.append(
-                VerificationItem(
-                    listing_id=listing.id,
-                    category="commute",
-                    question="Confirm realistic peak-time commute from the exact address.",
-                    reason="The listing has no commute time, so the ranking cannot verify this preference.",
-                    priority="high",
-                    source="missing",
-                )
-            )
-        elif listing.external_refs.get("commute_estimation"):
-            checks.append(
-                VerificationItem(
-                    listing_id=listing.id,
-                    category="commute",
-                    question="Check the commute in a live maps or transport provider.",
-                    reason="The current commute value is estimated, not provider-confirmed.",
-                    priority="medium",
-                    source="estimated",
-                )
-            )
+        checks.extend(generate_verification_items(listing))
         if not listing.area_data or not listing.area_data.evidence:
             checks.append(
                 VerificationItem(

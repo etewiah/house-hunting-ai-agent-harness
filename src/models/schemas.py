@@ -75,6 +75,25 @@ class ImageAnalysis:
 
 
 @dataclass(frozen=True)
+class PropertyDecisionDetails:
+    tenure: SourcedValue | None = None
+    lease_years_remaining: SourcedValue | None = None
+    service_charge_annual: SourcedValue | None = None
+    ground_rent_annual: SourcedValue | None = None
+    council_tax_band: SourcedValue | None = None
+    epc_rating: SourcedValue | None = None
+    chain_status: SourcedValue | None = None
+    parking_details: SourcedValue | None = None
+    outdoor_space: SourcedValue | None = None
+    condition_summary: SourcedValue | None = None
+    floor_area_sqft: SourcedValue | None = None
+    price_per_sqft: SourcedValue | None = None
+    flood_risk: SourcedValue | None = None
+    broadband: SourcedValue | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class BuyerProfile:
     location_query: str
     max_budget: int
@@ -102,6 +121,7 @@ class Listing:
     area_data: AreaData | None = None
     image_urls: list[str] = field(default_factory=list)
     image_analysis: ImageAnalysis | None = None
+    decision_details: PropertyDecisionDetails | None = None
     external_refs: dict[str, object] = field(default_factory=dict)
 
 

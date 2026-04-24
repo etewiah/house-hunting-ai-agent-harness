@@ -24,6 +24,12 @@ is designed to support:
 - source-aware comparison dimensions
 - what the buyer should verify next
 
+The harness now also supports optional `decision_details` on each listing for fields
+that matter in a UK buyer decision, including tenure, lease years, service charge,
+council tax, EPC, chain status, parking detail, flood risk, broadband, condition, and
+floor area. Missing or risky values become source-aware verification items that H2C can
+render as a buyer checklist.
+
 ## Possible Future Platform Capabilities
 
 - Read richer listing or comparison metadata from a machine-readable page or API.

@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from src.models.schemas import ExportOptions, ExportPayload, ExportResult, RankedListing
+from src.skills.verification import verification_summary
 
 REQUIRED_COLUMNS = [
     "rank",
@@ -27,6 +28,8 @@ REQUIRED_COLUMNS = [
     "area_evidence_count",
     "area_top_categories",
     "area_warning_count",
+    "verification_count",
+    "verification_high_priority_count",
     "source_url",
 ]
 
@@ -72,6 +75,7 @@ def _rows(ranked_listings: list[RankedListing], include_area_data: bool) -> list
             area_evidence_count = len(listing.area_data.evidence)
             area_top_categories = ";".join([item.category for item in listing.area_data.evidence[:3]])
             area_warning_count = len(listing.area_data.warnings)
+        verification = verification_summary(listing)
         rows.append(
             {
                 "rank": index,
@@ -95,6 +99,8 @@ def _rows(ranked_listings: list[RankedListing], include_area_data: bool) -> list
                 "area_evidence_count": area_evidence_count if include_area_data else "",
                 "area_top_categories": area_top_categories if include_area_data else "",
                 "area_warning_count": area_warning_count if include_area_data else "",
+                "verification_count": verification["verification_count"],
+                "verification_high_priority_count": verification["high_priority_count"],
                 "source_url": listing.source_url,
             }
         )

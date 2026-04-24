@@ -246,6 +246,8 @@ def test_csv_export_includes_area_metadata_columns(tmp_path):
     assert row["area_evidence_count"] == "1"
     assert row["area_top_categories"] == "schools"
     assert row["area_warning_count"] == "1"
+    assert row["verification_count"]
+    assert row["verification_high_priority_count"]
 
 
 def test_csv_export_skips_area_metadata_when_option_disabled(tmp_path):

@@ -19,6 +19,7 @@ from src.skills.listing_search import filter_by_location, filter_listings
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings
 from src.skills.tour_prep import generate_tour_questions
+from src.skills.verification import verification_summary
 
 
 class HouseHuntOrchestrator:
@@ -150,6 +151,18 @@ class HouseHuntOrchestrator:
             "estimated_ratio": round(estimated_ratio, 3),
             "confidence_band": confidence_band,
             "confidence_reason": confidence_reason,
+        }
+
+    def get_verification_rollup(self, max_listings: int = 5) -> dict[str, object]:
+        considered = self.state.ranked_listings[:max_listings]
+        summaries = [verification_summary(item.listing) for item in considered]
+        total = sum(int(item.get("verification_count", 0) or 0) for item in summaries)
+        high = sum(int(item.get("high_priority_count", 0) or 0) for item in summaries)
+        return {
+            "listing_count_considered": len(considered),
+            "total_verification_items": total,
+            "high_priority_items": high,
+            "items": summaries,
         }
 
     def intake(self, brief: str) -> BuyerProfile:
@@ -386,6 +399,7 @@ class HouseHuntOrchestrator:
                 "acquisition_summary": self.state.acquisition_summary,
                 "area_context_summary": self.get_area_context_summary(max_listings=options.max_listings),
                 "area_evidence_rollup": self.get_area_evidence_rollup(max_listings=options.max_listings),
+                "verification_rollup": self.get_verification_rollup(max_listings=options.max_listings),
                 "structured_comparison": asdict(
                     build_comparison_result(
                         self.state.ranked_listings,

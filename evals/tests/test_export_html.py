@@ -36,6 +36,7 @@ def test_html_export_writes_self_contained_report(tmp_path):
     assert "<script" not in html
     assert "Buyer Profile" in html
     assert "House Hunting Report" in html
+    assert "Verification:" in html
 
 
 def test_html_export_escapes_listing_text(tmp_path):

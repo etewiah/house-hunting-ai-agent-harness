@@ -17,6 +17,7 @@ v0.1 sketch. For browser-first usage details, see:
 - Affordability estimate
 - Tour prep and offer brief
 - CSV and HTML export
+- Source-aware verification checklist for missing or risky buyer decision fields
 - Eval suite
 - Optional MCP server
 
@@ -38,8 +39,9 @@ v0.1 sketch. For browser-first usage details, see:
 - clearer trace inspection / trace viewer tooling
 - richer export surfacing for extraction provenance and confidence
 - more browser-assisted smoke testing against live pages
-- broader buyer profile modelling for tenure, service charges, EPC, council tax,
-  condition, chain status, outdoor space, and buyer-specific decision weights
+- buyer-specific decision weights and richer provider-backed data for tenure,
+  service charges, EPC, council tax, condition, chain status, outdoor space,
+  flood risk, and broadband
 
 ## Later
 

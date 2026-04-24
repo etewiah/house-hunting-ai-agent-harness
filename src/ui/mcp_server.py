@@ -32,6 +32,7 @@ from src.skills.listing_input import listing_from_dict
 from src.skills.offer_brief import generate_offer_brief
 from src.skills.ranking import rank_listings as _rank_listings
 from src.skills.tour_prep import generate_tour_questions
+from src.skills.verification import verification_summary as _verification_summary
 
 mcp = FastMCP(
     "house-hunt",
@@ -117,6 +118,7 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
         "acquisition_summary": app.get_acquisition_summary(),
         "area_context_summary": app.get_area_context_summary(max_listings=limit),
         "area_evidence_rollup": app.get_area_evidence_rollup(max_listings=limit),
+        "verification_rollup": app.get_verification_rollup(max_listings=limit),
         "triage_warnings": app.state.triage_warnings,
         "ranked_listings": [_serialize_ranked_listing(item) for item in ranked],
         "explanations": explanations,
@@ -199,6 +201,12 @@ def estimate_affordability(price: int, deposit_percent: float = 0.15) -> dict:
 def tour_questions(listing: dict) -> list[str]:
     """Generate property-specific questions to ask on a viewing."""
     return generate_tour_questions(_to_listing(listing))
+
+
+@mcp.tool()
+def verification_checklist(listing: dict) -> dict:
+    """Generate source-aware checks a buyer should verify before viewing or offering."""
+    return _verification_summary(_to_listing(listing))
 
 
 @mcp.tool()

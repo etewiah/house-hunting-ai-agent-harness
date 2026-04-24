@@ -82,10 +82,12 @@ def test_mcp_run_house_hunt_returns_structured_browser_first_workflow():
     assert "acquisition_summary" in result
     assert "area_context_summary" in result
     assert "area_evidence_rollup" in result
+    assert "verification_rollup" in result
     assert result["acquisition_summary"]["candidate_count"] == 2
     assert result["area_context_summary"]["listing_count_considered"] >= 1
     assert result["area_context_summary"]["listings_with_area_context"] == 0
     assert result["area_evidence_rollup"]["total_evidence_items"] == 0
+    assert result["verification_rollup"]["total_verification_items"] >= 1
     assert result["ranked_listings"][0]["listing"]["id"] == "best"
     assert result["ranked_listings"][0]["score_breakdown"]["budget"]["status"] == "matched"
     assert result["explanations"]
@@ -221,3 +223,24 @@ def test_mcp_compare_ranked_homes_returns_structured_decision_payload():
     assert comparison["trade_offs"]
     assert comparison["dimensions"]
     assert comparison["verification_items"]
+
+
+def test_mcp_verification_checklist_returns_source_aware_items():
+    result = mcp_server.verification_checklist(
+        {
+            "id": "L1",
+            "title": "Flat",
+            "price": 200000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "location": "Birmingham",
+            "commute_minutes": None,
+            "features": ["parking"],
+            "description": "",
+            "source_url": "https://example.com/a",
+        }
+    )
+
+    assert result["listing_id"] == "L1"
+    assert result["verification_count"] >= 1
+    assert result["items"][0]["source"] in {"missing", "estimated", "inferred", "listing_provided"}

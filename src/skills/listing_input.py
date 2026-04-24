@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from src.models.schemas import AreaData, AreaEvidence, Listing
+from src.models.schemas import AreaData, AreaEvidence, Listing, PropertyDecisionDetails, SourcedValue
 
 
 def listing_from_dict(data: dict[str, object]) -> Listing:
@@ -20,6 +20,7 @@ def listing_from_dict(data: dict[str, object]) -> Listing:
         source_url=str(data.get("source_url", "")),
         area_data=_coerce_area_data(data.get("area_data"), listing_id=str(data.get("id", ""))),
         image_urls=_coerce_string_list(data.get("image_urls")),
+        decision_details=_coerce_decision_details(data.get("decision_details")),
         external_refs=_coerce_dict(data.get("external_refs")),
     )
 
@@ -89,3 +90,40 @@ def _coerce_area_data(value: object, listing_id: str) -> AreaData | None:
             )
     warnings = _coerce_string_list(value.get("warnings"))
     return AreaData(listing_id=listing_id, evidence=evidence_items, warnings=warnings)
+
+
+def _coerce_decision_details(value: object) -> PropertyDecisionDetails | None:
+    if not isinstance(value, dict):
+        return None
+    return PropertyDecisionDetails(
+        tenure=_coerce_sourced_value(value.get("tenure")),
+        lease_years_remaining=_coerce_sourced_value(value.get("lease_years_remaining")),
+        service_charge_annual=_coerce_sourced_value(value.get("service_charge_annual")),
+        ground_rent_annual=_coerce_sourced_value(value.get("ground_rent_annual")),
+        council_tax_band=_coerce_sourced_value(value.get("council_tax_band")),
+        epc_rating=_coerce_sourced_value(value.get("epc_rating")),
+        chain_status=_coerce_sourced_value(value.get("chain_status")),
+        parking_details=_coerce_sourced_value(value.get("parking_details")),
+        outdoor_space=_coerce_sourced_value(value.get("outdoor_space")),
+        condition_summary=_coerce_sourced_value(value.get("condition_summary")),
+        floor_area_sqft=_coerce_sourced_value(value.get("floor_area_sqft")),
+        price_per_sqft=_coerce_sourced_value(value.get("price_per_sqft")),
+        flood_risk=_coerce_sourced_value(value.get("flood_risk")),
+        broadband=_coerce_sourced_value(value.get("broadband")),
+        notes=_coerce_string_list(value.get("notes")),
+    )
+
+
+def _coerce_sourced_value(value: object) -> SourcedValue | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, dict):
+        return SourcedValue(
+            value=value.get("value"),
+            source=str(value.get("source", "missing")),
+            provider=None if value.get("provider") is None else str(value.get("provider")),
+            retrieved_at=None if value.get("retrieved_at") is None else str(value.get("retrieved_at")),
+            confidence=None if value.get("confidence") is None else str(value.get("confidence")),
+            warnings=_coerce_string_list(value.get("warnings")),
+        )
+    return SourcedValue(value=value, source="listing_provided")
