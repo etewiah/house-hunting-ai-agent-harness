@@ -28,8 +28,12 @@ $ARGUMENTS
    - `features`: list of normalized keywords (parking, garden, garage, walkable, quiet street, balcony, lift, etc.)
    - `description`: a few sentences from the listing summary or key features
    - `source_url`: the canonical URL
+   - `image_urls`: required only if the requested output includes a HomesToCompare comparison link; use only observed photo URLs
+   - `external_refs.photo_extraction`: required only for HomesToCompare publishing; include verified photo diagnostics
 
 4. **Filter and normalize.** Keep only listings where you successfully extracted at least price, bedrooms, bathrooms, and location. If a listing has sparse data (e.g. missing description), normalize what you have and mark it; do not discard it.
+
+   If the user expects a HomesToCompare link, do not publish unless the selected listings have verified photos. The harness will refuse unverified photos; report those validation errors instead of returning an incomplete H2C comparison.
 
 5. **Call the harness.** Invoke the `run_house_hunt` MCP tool with:
    ```
@@ -47,10 +51,13 @@ $ARGUMENTS
    - **Offer brief** (points to consider for the top match)
    - **Boundary notice** (the harness's disclaimer about advice limits)
    - **Trace path** (if the MCP tool returned one, include it for diagnostics)
+   - **HomesToCompare URL** only when publishing succeeded with verified submitted photos
 
 ## Guardrails
 
 - Do not invent missing fields. Leave `commute_minutes` null if not on the page.
+- Do not hallucinate listing photo URLs. Use only URLs observed in page HTML, page state, JSON-LD, DOM images, browser performance entries, network responses, or an API response actually fetched during the session.
+- Do not report an H2C comparison as complete when photos are missing or unverified.
 - Do not present outputs as legal, mortgage, survey, or inspection advice.
 - Always cite sources (e.g. "listing says…", "estimated from brief").
 - Keep source URLs so the user can verify.
