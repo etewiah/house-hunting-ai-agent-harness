@@ -1,12 +1,16 @@
 # House Hunting Agent
 
-Tell it what you want in plain English. Get ranked matches, explanations, an affordability estimate, and a list of questions to ask on the tour.
+House Hunting Agent is a Python harness for buyer-side property workflows. A coding
+agent, MCP client, or integration supplies a buyer brief plus candidate listings; the
+harness parses the brief, ranks the listings, explains trade-offs, estimates affordability,
+and prepares tour questions.
 
 ```
 Buyer brief: 3-bed near Manchester Piccadilly, budget £350k, need a garden, max 30 min commute
+Candidate listings: supplied by browser search, CSV, HomesToCompare, or another adapter
 
 Here's what I understood:
-  Location:      Manchester commute
+  Location:      Manchester Piccadilly
   Budget:        £350,000
   Bedrooms:      3+
   Commute:       30 mins max
@@ -16,14 +20,14 @@ Here's what I understood:
 ```
 Found 3 matches:
 
-1. Quiet Garden Terrace  [94/100]
-   Walthamstow · £675,000 · 3 bed · 1 bath · 38 min commute
-   + within budget, bedroom requirement, commute requirement, garden, walkable, quiet
+1. Ancoats Garden Townhouse  [94/100]
+   Ancoats, Manchester · £345,000 · 3 bed · 2 bath · 18 min commute
+   + within budget, bedroom requirement, commute requirement, garden
 
 Affordability estimate (top match):
-  Deposit:  £101,250
-  Loan:     £573,750
-  Monthly:  ~£3,438/month
+  Deposit:  £51,750
+  Loan:     £293,250
+  Monthly:  ~£1,758/month
   Note: estimated mortgage payment only; excludes fees, taxes, insurance
 
 Questions to ask on the tour:
