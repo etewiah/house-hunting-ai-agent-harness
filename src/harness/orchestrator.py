@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import asdict
 from datetime import datetime, timezone
 
 from src.harness.policies import advice_boundary_notice, check_output_guardrails
@@ -10,7 +11,7 @@ from src.models.capabilities import ListingProvider
 from src.models.schemas import BuyerProfile, ExportOptions, ExportPayload, ExportResult, Listing, RankedListing
 from src.skills.export import ExportOrchestrator
 from src.skills.affordability import estimate_monthly_payment
-from src.skills.comparison import compare_homes
+from src.skills.comparison import build_comparison_result, compare_ranked_homes
 from src.skills.explanation import explain_ranked_listing
 from src.skills.intake import parse_buyer_brief
 from src.skills.listing_input import listing_from_dict
@@ -277,11 +278,56 @@ class HouseHuntOrchestrator:
 
     def compare_top(self, count: int = 3) -> str:
         self._set_pipeline_stage("comparison.started", "Building side-by-side comparison", count=count)
-        listings = [item.listing for item in self.state.ranked_listings[:count]]
-        output = compare_homes(listings)
+        output = compare_ranked_homes(self.state.ranked_listings, count=count)
         self.tracer.record("comparison.summary", output)
-        self._set_pipeline_stage("comparison.completed", "Comparison ready", compared_count=len(listings))
+        self._set_pipeline_stage(
+            "comparison.completed",
+            "Comparison ready",
+            compared_count=len(self.state.ranked_listings[:count]),
+        )
         return output
+
+    def compare_top_structured(self, count: int = 3) -> dict[str, object]:
+        self._set_pipeline_stage("comparison.structured_started", "Building structured comparison", count=count)
+        result = build_comparison_result(self.state.ranked_listings, max_listings=count)
+        self.tracer.record("comparison.structured", result)
+        self._set_pipeline_stage(
+            "comparison.structured_completed",
+            "Structured comparison ready",
+            compared_count=len(result.listings),
+            confidence=result.confidence,
+        )
+        return {
+            "recommendation_listing_id": result.recommendation_listing_id,
+            "recommendation_summary": result.recommendation_summary,
+            "close_call_score": result.close_call_score,
+            "confidence": result.confidence,
+            "warnings": result.warnings,
+            "trade_offs": result.trade_offs,
+            "deal_breakers": result.deal_breakers,
+            "dimensions": [
+                {
+                    "name": item.name,
+                    "winner_listing_id": item.winner_listing_id,
+                    "summaries": item.summaries,
+                    "source": item.source,
+                    "confidence": item.confidence,
+                    "warnings": item.warnings,
+                }
+                for item in result.dimensions
+            ],
+            "verification_items": [
+                {
+                    "listing_id": item.listing_id,
+                    "category": item.category,
+                    "question": item.question,
+                    "reason": item.reason,
+                    "priority": item.priority,
+                    "source": item.source,
+                }
+                for item in result.verification_items
+            ],
+        }
 
     def create_comparison(self, count: int = 2) -> dict[str, object]:
         if self.h2c_connector is None:
@@ -289,7 +335,11 @@ class HouseHuntOrchestrator:
         if len(self.state.ranked_listings) < count:
             return {"status": "skipped", "reason": f"Need at least {count} ranked listings to compare."}
         top = [item.listing for item in self.state.ranked_listings[:count]]
-        result = self.h2c_connector.create_comparison(top)
+        comparison = self.compare_top_structured(count=count)
+        try:
+            result = self.h2c_connector.create_comparison(top, comparison=comparison)
+        except TypeError:
+            result = self.h2c_connector.create_comparison(top)
         self.tracer.record("comparison.created", result)
         return result
 
@@ -336,6 +386,12 @@ class HouseHuntOrchestrator:
                 "acquisition_summary": self.state.acquisition_summary,
                 "area_context_summary": self.get_area_context_summary(max_listings=options.max_listings),
                 "area_evidence_rollup": self.get_area_evidence_rollup(max_listings=options.max_listings),
+                "structured_comparison": asdict(
+                    build_comparison_result(
+                        self.state.ranked_listings,
+                        max_listings=options.max_listings,
+                    )
+                ),
                 "pipeline_status": self.get_pipeline_status(),
             },
             session_id=self.state.session.session_id if self.state.session is not None else None,

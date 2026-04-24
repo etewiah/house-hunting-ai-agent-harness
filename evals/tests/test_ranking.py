@@ -104,3 +104,61 @@ def test_estimated_commute_generates_warning():
     result = rank_listing(profile, listing)
     assert "commute requirement" in result.matched
     assert "commute time estimated" in result.warnings
+    assert result.score_breakdown["commute"]["source"] == "estimated"
+
+
+def test_score_breakdown_explains_core_dimensions():
+    profile = BuyerProfile(
+        location_query="test",
+        max_budget=700000,
+        min_bedrooms=3,
+        max_commute_minutes=45,
+        must_haves=["garden"],
+        nice_to_haves=["parking"],
+    )
+    listing = Listing(
+        id="L1001",
+        title="Explained score",
+        price=650000,
+        bedrooms=3,
+        bathrooms=1,
+        location="test",
+        commute_minutes=35,
+        features=["garden", "parking"],
+        description="",
+        source_url="https://example.com",
+    )
+
+    result = rank_listing(profile, listing)
+
+    assert result.score_breakdown["budget"]["status"] == "matched"
+    assert result.score_breakdown["bedrooms"]["points"] == 20
+    assert result.score_breakdown["commute"]["status"] == "matched"
+    assert result.score_breakdown["must_haves"][0]["feature"] == "garden"
+
+
+def test_feature_matching_accepts_descriptive_listing_phrases():
+    profile = BuyerProfile(
+        location_query="test",
+        max_budget=700000,
+        min_bedrooms=3,
+        must_haves=["quiet", "garden"],
+        nice_to_haves=[],
+    )
+    listing = Listing(
+        id="L1002",
+        title="Descriptive features",
+        price=650000,
+        bedrooms=3,
+        bathrooms=1,
+        location="test",
+        commute_minutes=None,
+        features=["quiet street", "rear garden"],
+        description="",
+        source_url="https://example.com",
+    )
+
+    result = rank_listing(profile, listing)
+
+    assert "quiet" in result.matched
+    assert "garden" in result.matched

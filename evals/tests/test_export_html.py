@@ -258,3 +258,37 @@ def test_html_export_renders_area_rollup_when_present(tmp_path):
     assert "estimated=2" in html
     assert any("Area evidence rollup: 3 evidence items across 2 listings" in w for w in result.warnings)
     assert any("confidence=medium" in w for w in result.warnings)
+
+
+def test_html_export_renders_structured_comparison_when_present(tmp_path):
+    output_path = tmp_path / "report.html"
+    payload = ExportPayload(
+        ranked_listings=[_ranked_listing("First home")],
+        generated_outputs={
+            "structured_comparison": {
+                "recommendation_summary": "First home is stronger on the current brief.",
+                "confidence": "medium",
+                "close_call_score": 0.42,
+                "trade_offs": ["First home gains garden; gives up no major misses."],
+                "deal_breakers": [],
+                "verification_items": [
+                    {
+                        "listing_id": "L1",
+                        "priority": "high",
+                        "question": "Confirm lease details.",
+                        "reason": "Lease data is missing.",
+                        "source": "missing",
+                    }
+                ],
+            }
+        },
+    )
+
+    ExportOrchestrator().export(payload, ExportOptions(format="html", output_path=str(output_path)))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "Recommendation And Trade-Offs" in html
+    assert "First home is stronger" in html
+    assert "Visible trade-offs" in html
+    assert "What to verify next" in html
+    assert "Confirm lease details." in html

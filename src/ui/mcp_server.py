@@ -25,6 +25,7 @@ from src.skills.browser_extraction import (
     ExtractionError,
 )
 from src.skills.comparison import compare_homes as _compare_homes
+from src.skills.comparison import build_comparison_result as _build_comparison_result
 from src.skills.export import ExportOrchestrator
 from src.skills.intake import parse_buyer_brief
 from src.skills.listing_input import listing_from_dict
@@ -54,6 +55,7 @@ def _to_ranked_listing(item: dict) -> RankedListing:
         matched=[str(value) for value in list(item.get("matched") or [])],
         missed=[str(value) for value in list(item.get("missed") or [])],
         warnings=[str(value) for value in list(item.get("warnings") or [])],
+        score_breakdown=dict(item.get("score_breakdown") or {}),
     )
 
 
@@ -64,6 +66,7 @@ def _serialize_ranked_listing(item: RankedListing) -> dict[str, object]:
         "matched": item.matched,
         "missed": item.missed,
         "warnings": item.warnings,
+        "score_breakdown": item.score_breakdown,
     }
 
 
@@ -107,6 +110,7 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
     ranked = app.triage_listing_dicts(listings, limit=limit)
     explanations = app.explain_top_matches()
     comparison = app.compare_top(count=min(3, len(ranked)))
+    structured_comparison = app.compare_top_structured(count=min(3, len(ranked)))
     next_steps = app.prep_next_steps() if ranked else None
     return {
         "buyer_profile": asdict(profile),
@@ -117,6 +121,7 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
         "ranked_listings": [_serialize_ranked_listing(item) for item in ranked],
         "explanations": explanations,
         "comparison": comparison,
+        "structured_comparison": structured_comparison,
         "next_steps": None if next_steps is None else {
             "boundary": next_steps["boundary"],
             "affordability": asdict(next_steps["affordability"]),
@@ -130,6 +135,50 @@ def run_house_hunt(brief: str, listings: list[dict], limit: int = 5) -> dict:
 def compare_homes(listings: list[dict]) -> str:
     """Generate a side-by-side comparison of up to 5 listings."""
     return _compare_homes([_to_listing(listing) for listing in listings])
+
+
+@mcp.tool()
+def compare_ranked_homes(ranked_listings: list[dict], max_listings: int = 3) -> dict:
+    """Generate a structured comparison for ranked homes.
+
+    Returns a recommendation, visible trade-offs, possible deal-breakers, source-aware
+    comparison dimensions, and verification questions.
+    """
+    result = _build_comparison_result(
+        [_to_ranked_listing(item) for item in ranked_listings],
+        max_listings=max_listings,
+    )
+    return {
+        "recommendation_listing_id": result.recommendation_listing_id,
+        "recommendation_summary": result.recommendation_summary,
+        "close_call_score": result.close_call_score,
+        "confidence": result.confidence,
+        "warnings": result.warnings,
+        "trade_offs": result.trade_offs,
+        "deal_breakers": result.deal_breakers,
+        "dimensions": [
+            {
+                "name": item.name,
+                "winner_listing_id": item.winner_listing_id,
+                "summaries": item.summaries,
+                "source": item.source,
+                "confidence": item.confidence,
+                "warnings": item.warnings,
+            }
+            for item in result.dimensions
+        ],
+        "verification_items": [
+            {
+                "listing_id": item.listing_id,
+                "category": item.category,
+                "question": item.question,
+                "reason": item.reason,
+                "priority": item.priority,
+                "source": item.source,
+            }
+            for item in result.verification_items
+        ],
+    }
 
 
 @mcp.tool()

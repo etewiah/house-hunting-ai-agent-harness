@@ -12,8 +12,8 @@ v0.1 sketch. For browser-first usage details, see:
 - Optional provider-backed listing search
 - Browser-supplied / user-supplied listing support
 - Preference intake
-- Listing ranking and explanations
-- Comparison summary
+- Listing ranking with machine-readable score breakdowns
+- Structured comparison result with recommendation, trade-offs, confidence, and verification items
 - Affordability estimate
 - Tour prep and offer brief
 - CSV and HTML export
@@ -38,6 +38,8 @@ v0.1 sketch. For browser-first usage details, see:
 - clearer trace inspection / trace viewer tooling
 - richer export surfacing for extraction provenance and confidence
 - more browser-assisted smoke testing against live pages
+- broader buyer profile modelling for tenure, service charges, EPC, council tax,
+  condition, chain status, outdoor space, and buyer-specific decision weights
 
 ## Later
 

@@ -112,6 +112,41 @@ class RankedListing:
     matched: list[str]
     missed: list[str]
     warnings: list[str]
+    score_breakdown: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ComparisonDimension:
+    name: str
+    winner_listing_id: str | None
+    summaries: dict[str, str] = field(default_factory=dict)
+    source: SourceLabel = "inferred"
+    confidence: str = "medium"
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class VerificationItem:
+    listing_id: str | None
+    category: str
+    question: str
+    reason: str
+    priority: str = "medium"
+    source: SourceLabel = "inferred"
+
+
+@dataclass(frozen=True)
+class ComparisonResult:
+    listings: list[Listing]
+    recommendation_listing_id: str | None
+    recommendation_summary: str
+    close_call_score: float
+    dimensions: list[ComparisonDimension] = field(default_factory=list)
+    trade_offs: list[str] = field(default_factory=list)
+    deal_breakers: list[str] = field(default_factory=list)
+    verification_items: list[VerificationItem] = field(default_factory=list)
+    confidence: str = "medium"
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

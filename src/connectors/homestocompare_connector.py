@@ -20,11 +20,17 @@ class HomesToCompareConnector:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
 
-    def create_comparison(self, listings: list[Listing]) -> dict[str, object]:
+    def create_comparison(
+        self,
+        listings: list[Listing],
+        comparison: dict[str, object] | None = None,
+    ) -> dict[str, object]:
         payload = {
             "listings": [asdict(listing) for listing in listings],
             "source": "house-hunting-agent-harness",
         }
+        if comparison is not None:
+            payload["comparison"] = comparison
         req = urllib.request.Request(
             f"{self.base_url}/api/house-hunt/create-comparison",
             data=json.dumps(payload).encode("utf-8"),

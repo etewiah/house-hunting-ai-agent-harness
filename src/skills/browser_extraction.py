@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 DEFAULT_LISTING_SITES = ["rightmove.co.uk", "zoopla.co.uk", "onthemarket.com"]
 
@@ -367,7 +367,6 @@ def house_hunt_from_web(
         }
 
     # Step 3: Compute average quality and filter by threshold
-    all_listings = [e["listing"] for e in extracted]
     quality_scores = [e["diagnostics"].get("qualityScore", 0) for e in extracted]
     average_quality = (
         sum(quality_scores) // len(quality_scores) if quality_scores else 0

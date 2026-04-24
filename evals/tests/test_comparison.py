@@ -1,5 +1,7 @@
 from src.models.schemas import AreaData, AreaEvidence, Listing
-from src.skills.comparison import compare_homes
+from src.skills.comparison import build_comparison_result, compare_homes
+from src.skills.ranking import rank_listings
+from src.models.schemas import BuyerProfile
 
 
 def test_compare_homes_marks_estimated_commute():
@@ -52,3 +54,48 @@ def test_compare_homes_includes_area_context_when_available():
 
     assert "area context:" in output
     assert "schools (estimated): Two schools rated good nearby" in output
+
+
+def test_structured_comparison_returns_recommendation_and_verification_items():
+    profile = BuyerProfile(
+        location_query="Birmingham",
+        max_budget=300000,
+        min_bedrooms=2,
+        max_commute_minutes=25,
+        must_haves=["parking"],
+        nice_to_haves=[],
+    )
+    listings = [
+        Listing(
+            id="best",
+            title="Best Flat",
+            price=250000,
+            bedrooms=2,
+            bathrooms=1,
+            location="Birmingham",
+            commute_minutes=18,
+            features=["parking"],
+            description="",
+            source_url="https://example.com/best",
+        ),
+        Listing(
+            id="missing",
+            title="Missing Evidence Flat",
+            price=245000,
+            bedrooms=2,
+            bathrooms=1,
+            location="Birmingham",
+            commute_minutes=None,
+            features=["parking"],
+            description="",
+            source_url="https://example.com/missing",
+        ),
+    ]
+    ranked = rank_listings(profile, listings)
+
+    result = build_comparison_result(ranked, max_listings=2)
+
+    assert result.recommendation_listing_id == "best"
+    assert result.trade_offs
+    assert any(item.category == "commute" for item in result.verification_items)
+    assert any(dimension.name == "price" for dimension in result.dimensions)

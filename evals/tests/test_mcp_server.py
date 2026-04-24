@@ -87,8 +87,11 @@ def test_mcp_run_house_hunt_returns_structured_browser_first_workflow():
     assert result["area_context_summary"]["listings_with_area_context"] == 0
     assert result["area_evidence_rollup"]["total_evidence_items"] == 0
     assert result["ranked_listings"][0]["listing"]["id"] == "best"
+    assert result["ranked_listings"][0]["score_breakdown"]["budget"]["status"] == "matched"
     assert result["explanations"]
     assert "Boundary:" in result["comparison"]
+    assert result["structured_comparison"]["recommendation_listing_id"] == "best"
+    assert result["structured_comparison"]["verification_items"]
     assert result["next_steps"]["affordability"]["listing_id"] == "best"
     assert "negotiation advice" in result["next_steps"]["boundary"]
 
@@ -204,3 +207,17 @@ def test_mcp_export_html_respects_max_listings_and_boundary_notice(tmp_path):
     assert "Second home" not in html
     assert "negotiation advice" in html
     assert "fiduciary" in html
+
+
+def test_mcp_compare_ranked_homes_returns_structured_decision_payload():
+    ranked = mcp_server.rank_listings(
+        "2-bed flat near Birmingham New Street, under £250k, max 25 min commute, parking preferred",
+        _browser_style_rank_inputs(),
+    )
+
+    comparison = mcp_server.compare_ranked_homes(ranked, max_listings=2)
+
+    assert comparison["recommendation_listing_id"] == "best"
+    assert comparison["trade_offs"]
+    assert comparison["dimensions"]
+    assert comparison["verification_items"]

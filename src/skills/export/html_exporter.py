@@ -87,6 +87,32 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
         </section>
         """
 
+    comparison_html = ""
+    comparison = payload.generated_outputs.get("structured_comparison") if payload.generated_outputs else None
+    if isinstance(comparison, dict) and comparison:
+        trade_offs = comparison.get("trade_offs")
+        deal_breakers = comparison.get("deal_breakers")
+        verification_items = comparison.get("verification_items")
+        trade_offs_html = _render_list(trade_offs if isinstance(trade_offs, list) else [])
+        deal_breakers_html = _render_list(deal_breakers if isinstance(deal_breakers, list) else [])
+        verification_html = _render_verification_items(
+            verification_items if isinstance(verification_items, list) else []
+        )
+        comparison_html = f"""
+        <section>
+          <h2>Recommendation And Trade-Offs</h2>
+          <p><strong>Recommendation:</strong> {escape(str(comparison.get('recommendation_summary', 'No recommendation available.')))}</p>
+          <p><strong>Confidence:</strong> {escape(str(comparison.get('confidence', 'unknown')))}</p>
+          <p><strong>Close-call score:</strong> {escape(str(comparison.get('close_call_score', 'unknown')))}</p>
+          <h3>Visible trade-offs</h3>
+          {trade_offs_html}
+          <h3>Possible deal-breakers</h3>
+          {deal_breakers_html}
+          <h3>What to verify next</h3>
+          {verification_html}
+        </section>
+        """
+
     listing_items = "\n".join(
       _render_listing(index, item, include_area_data=include_area_data)
       for index, item in enumerate(listings, 1)
@@ -113,6 +139,7 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
     {profile_html}
     {acquisition_html}
     {area_rollup_html}
+    {comparison_html}
     <section>
       <h2>Ranked Listings</h2>
       {listing_items or '<p>No listings exported.</p>'}
@@ -125,6 +152,32 @@ def _render(payload: ExportPayload, generated_at: str, listings, include_area_da
 </body>
 </html>
 """
+
+
+def _render_list(items: list[object]) -> str:
+    if not items:
+        return "<p>None identified from the current evidence.</p>"
+    return "<ul>" + "".join(f"<li>{escape(str(item))}</li>" for item in items) + "</ul>"
+
+
+def _render_verification_items(items: list[object]) -> str:
+    if not items:
+        return "<p>No specific verification items were generated.</p>"
+    parts: list[str] = []
+    for raw in items:
+        if not isinstance(raw, dict):
+            parts.append(f"<li>{escape(str(raw))}</li>")
+            continue
+        priority = escape(str(raw.get("priority", "medium")))
+        listing_id = escape(str(raw.get("listing_id") or "all listings"))
+        question = escape(str(raw.get("question", "")))
+        reason = escape(str(raw.get("reason", "")))
+        source = escape(str(raw.get("source", "inferred")))
+        parts.append(
+            f"<li><strong>{priority}</strong> | {listing_id}: {question} "
+            f"<small>Reason: {reason} Source: {source}</small></li>"
+        )
+    return "<ul>" + "".join(parts) + "</ul>"
 
 
 def _render_listing(index: int, item, include_area_data: bool = True) -> str:
