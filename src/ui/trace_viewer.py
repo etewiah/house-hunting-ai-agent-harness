@@ -337,7 +337,7 @@ def main(path_arg: str | None = None, list_only: bool = False, raw_json: bool = 
         traces = _find_traces()
         if not traces:
             print("  No trace files found in .traces/")
-            print("  Run 'house-hunt search' to generate one.")
+            print("  Run a browser-assisted or provider-backed harness workflow to generate one.")
             return
         target = traces[0]
 

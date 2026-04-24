@@ -108,7 +108,7 @@ Show the user:
 | Error | Cause | Fix |
 |---|---|---|
 | `ModuleNotFoundError: src` | Not running from harness root | `cd house-hunting-ai-agent-harness` first |
-| `No listing provider configured` | Neither `H2C_READ_KEY` nor `LISTINGS_CSV_PATH` is set | For CLI search, configure a provider; for agent workflows, gather listings externally and pass them into the harness |
+| `No listing provider configured` | Neither `H2C_READ_KEY` nor `LISTINGS_CSV_PATH` is set | For agent workflows, gather listings externally and pass them into the harness |
 | `No listings matched` | The configured provider returned no candidates | Relax the brief or inspect provider/API filters |
 | Regex-style intake/explanations | No standalone harness LLM adapter configured | Expected for agent-driven use; the calling LLM agent can interpret and summarize results |
 

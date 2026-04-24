@@ -8,7 +8,7 @@ v0.1 sketch. For browser-first usage details, see:
 ## Implemented now
 
 ### Core harness
-- CLI workflow
+- MCP and trace command utilities
 - Optional provider-backed listing search
 - Browser-supplied / user-supplied listing support
 - Preference intake

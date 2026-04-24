@@ -3,7 +3,7 @@
 Tell it what you want in plain English. Get ranked matches, explanations, an affordability estimate, and a list of questions to ask on the tour.
 
 ```
-Your brief: 3-bed near Manchester Piccadilly, budget £350k, need a garden, max 30 min commute
+Buyer brief: 3-bed near Manchester Piccadilly, budget £350k, need a garden, max 30 min commute
 
 Here's what I understood:
   Location:      Manchester commute
@@ -11,8 +11,6 @@ Here's what I understood:
   Bedrooms:      3+
   Commute:       30 mins max
   Must-haves:    garden
-
-Does that look right? [Y/n]:
 ```
 
 ```
@@ -40,7 +38,7 @@ Questions to ask on the tour:
 
 The harness is designed so coding agents such as [Codex](https://openai.com/codex) or [Claude Code](https://www.anthropic.com/claude-code) can use it
 directly from the repository. An agent can read the docs, inspect the Python modules, run
-the CLI, call functions from `src/skills/`, and run the eval suite without any server
+the MCP server when needed, call functions from `src/skills/`, and run the eval suite without any server
 setup.
 
 For agent-facing instructions, see [AGENTS.md](AGENTS.md).
@@ -106,7 +104,7 @@ Useful direct entry points:
 
 | Entry point | What it does |
 |---|---|
-| `uv run house-hunt` | Starts an interactive CLI; direct search requires a configured listing provider |
+| `uv run house-hunt serve` | Starts the optional MCP server |
 | `uv run --extra dev pytest` | Runs the eval suite |
 | `.codex/skills/run-house-hunt/SKILL.md` | Codex skill for running the full buyer brief pipeline |
 | `src/skills/*` | Repo-native skills for intake, ranking, comparison, exports, and next steps |
@@ -133,26 +131,15 @@ about what was scraped vs estimated.
 ```bash
 git clone https://github.com/your-org/house-hunting-ai-agent-harness
 cd house-hunting-ai-agent-harness
-uv run house-hunt
+uv run --extra dev pytest
 ```
 
-**With an Anthropic API key** (`ANTHROPIC_API_KEY` set in your environment), the CLI uses Claude for intake and explanations — it understands natural language properly and gives conversational, specific explanations for each match.
-
-The standalone CLI needs a listing provider for direct search. Set `H2C_READ_KEY` for HomesToCompare search, or
-set `LISTINGS_CSV_PATH` to a CSV export with `Listing` fields. In coding-agent workflows,
-the listing provider is optional: an agent such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent), [Claude Code](https://www.anthropic.com/claude-code), or [Codex](https://openai.com/codex) can use its own browser or search tools to find listings, normalize them into `Listing` objects, and pass them into the harness for ranking,
-comparison, explanation, and export. Without an LLM key, intake falls back to regex parsing.
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-uv run house-hunt
-```
-
-Type your search in plain English:
-
-- `"3-bed in Bristol, budget £400k, need parking and good schools"`
-- `"2-bed flat, max 20 min commute to London Bridge, under £500k"`
-- `"somewhere quiet in Leeds with a garden, 4 beds, around £300k"`
+The old standalone interactive listing search has been removed because it could not
+discover live listings without an external provider. In coding-agent workflows, an agent
+such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent),
+[Claude Code](https://www.anthropic.com/claude-code), or [Codex](https://openai.com/codex)
+finds or receives listings, normalizes them into `Listing` objects, and passes them into
+the harness for ranking, comparison, explanation, and export.
 
 ---
 
@@ -188,7 +175,7 @@ src/
   skills/       intake, ranking, explanation, comparison, affordability, tour prep, offer brief
   harness/      orchestration, session state, policies, tracing, approvals
   connectors/   local CSV, optional MCP stub, HomesToCompare connector
-  ui/           CLI, web demo stub
+  ui/           MCP/trace command utilities, web demo stub
 evals/
   tests/        eval suite
   datasets/     buyer profile and comparison fixtures
@@ -247,6 +234,6 @@ The agent will never present itself as a lawyer, mortgage adviser, surveyor, ins
 
 ## v0.1 scope
 
-Included: CLI, buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, connector stubs, and browser-assisted workflows via agent integrations such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent), [Claude Code](https://www.anthropic.com/claude-code), and [Codex](https://openai.com/codex).
+Included: buyer intake, ranking, explanations, comparison, affordability estimate, tour prep, offer brief, CSV/HTML export, eval suite, optional MCP server, trace utilities, connector stubs, and browser-assisted workflows via agent integrations such as [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent), [Claude Code](https://www.anthropic.com/claude-code), and [Codex](https://openai.com/codex).
 
 Not included in the core harness: a built-in standalone autonomous browser agent, negotiation automation, legal or mortgage advice, transaction management.

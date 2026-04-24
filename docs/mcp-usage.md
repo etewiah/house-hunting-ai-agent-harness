@@ -284,7 +284,7 @@ Exports now preserve more browser-first metadata where present, including:
 
 ## LLM behavior in MCP mode
 
-The MCP server uses the same provider detection as the CLI.
+The MCP server uses the same provider detection as the repository app wiring.
 
 See:
 - `providers.md`

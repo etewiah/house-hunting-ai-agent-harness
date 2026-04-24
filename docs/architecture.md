@@ -61,6 +61,6 @@ In browser-first workflows, an external agent or the project-local Pi extension 
 ## Agent Access
 
 Coding agents can use the harness directly by reading the repository, importing Python
-modules, running the CLI, and executing tests. The MCP server is an optional compatibility
+modules, and executing tests. The MCP server is an optional compatibility
 layer for clients that need MCP tool discovery; it is not required for repo-native agent
 workflows.

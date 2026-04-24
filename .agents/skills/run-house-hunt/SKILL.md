@@ -92,12 +92,7 @@ Replace `BRIEF_GOES_HERE` with the actual buyer brief.
 
 ### Step 3 — Export results (optional)
 
-```bash
-uv run house-hunt demo --export-path results.csv
-uv run house-hunt demo --export-path results.html
-```
-
-Or via Python, pass `ExportOptions` directly to `app.export()`.
+Via Python, pass `ExportOptions` directly to `app.export()` after ranking results.
 
 ### Step 4 — Report back
 

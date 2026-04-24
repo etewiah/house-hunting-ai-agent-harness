@@ -27,7 +27,7 @@ If `LLM_PROVIDER` is not set, the harness picks a provider automatically:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 Uses `claude-haiku-4-5-20251001` by default for intake and explanations
@@ -43,7 +43,7 @@ export BUYER_AGENT_EXPLAIN_MODEL=claude-sonnet-4-6
 ```bash
 export OPENAI_API_KEY=sk-...
 export OPENAI_MODEL=gpt-4o-mini   # default
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 ## Ollama (local, free)
@@ -55,7 +55,7 @@ ollama pull llama3.2
 export LLM_PROVIDER=ollama
 export OPENAI_BASE_URL=http://localhost:11434/v1
 export OPENAI_MODEL=llama3.2
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 `OPENAI_API_KEY` is not required for Ollama.
@@ -67,7 +67,7 @@ export LLM_PROVIDER=groq
 export OPENAI_API_KEY=gsk_...      # Groq API key
 export OPENAI_BASE_URL=https://api.groq.com/openai/v1
 export OPENAI_MODEL=llama-3.1-70b-versatile
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 ## Together AI
@@ -77,7 +77,7 @@ export LLM_PROVIDER=together
 export OPENAI_API_KEY=...
 export OPENAI_BASE_URL=https://api.together.xyz/v1
 export OPENAI_MODEL=meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 ## LM Studio (local)
@@ -88,7 +88,7 @@ Start LM Studio's local server (default port 1234), then:
 export LLM_PROVIDER=lm_studio
 export OPENAI_BASE_URL=http://localhost:1234/v1
 export OPENAI_MODEL=your-loaded-model
-uv run house-hunt
+uv run house-hunt serve
 ```
 
 ## Adding a new provider
@@ -106,10 +106,10 @@ as reference implementations. Then register it in `src/connectors/provider_facto
 ## Optional MCP Server
 
 The MCP server (`uv run house-hunt serve`) is optional. It uses the same provider
-detection as the CLI. Set the same environment variables before starting the server if
-your MCP client needs model-backed tools.
+detection as the repository app wiring. Set the same environment variables before
+starting the server if your MCP client needs model-backed tools.
 
 For MCP-specific usage patterns and tool selection, see `mcp-usage.md`.
 
-Coding agents can usually use the repository directly without MCP by importing modules,
-running the CLI, or calling the eval suite.
+Coding agents can usually use the repository directly without MCP by importing modules
+or calling the eval suite.

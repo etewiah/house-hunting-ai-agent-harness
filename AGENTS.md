@@ -15,7 +15,7 @@ explicitly wants MCP tool calls from another client.
 ## Useful Commands
 
 ```bash
-uv run house-hunt
+uv run house-hunt serve
 uv run --extra dev pytest
 ```
 
