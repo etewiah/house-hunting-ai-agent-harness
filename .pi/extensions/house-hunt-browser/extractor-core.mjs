@@ -182,7 +182,7 @@ function regexInt(text, regex) {
 
 function firstNonEmpty(...values) {
   for (const value of values) {
-    if (value && value.trim()) return value.trim();
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
   return "";
 }
@@ -262,11 +262,28 @@ function extractRightmoveListing(url, html, pageText, jsonLdObjects) {
     price: firstInt(coerceInt(propertyData?.prices?.primaryPrice), coerceInt(propertyData?.price), extractCurrencyInt(pageText)),
     bedrooms: firstInt(coerceInt(propertyData?.bedrooms), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
     bathrooms: firstInt(coerceInt(propertyData?.bathrooms), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
-    location: firstNonEmpty(propertyData?.displayAddress, propertyData?.address, inferLocationFromTitle(extractTitleTag(html) ?? "")),
+    location: firstNonEmpty(
+      propertyData?.displayAddress,
+      typeof propertyData?.address === "string" ? propertyData.address : propertyData?.address?.displayAddress,
+      inferLocationFromTitle(extractTitleTag(html) ?? ""),
+    ),
     description: firstNonEmpty(propertyData?.summary, propertyData?.description, extractMeta(html, "name=\"description\"", "content")),
     features,
     source_url: firstNonEmpty(propertyData?.url, extractCanonicalUrl(html), url),
   };
+}
+
+function extractZooplaAnalyticsJson(html) {
+  const matches = [...html.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const m of matches) {
+    try {
+      const d = JSON.parse(m[1]);
+      if (d.listing_id || d.__typename === "ListingAnalyticsTaxonomy") return d;
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 function extractZooplaListing(url, html, pageText, jsonLdObjects) {
@@ -275,18 +292,28 @@ function extractZooplaListing(url, html, pageText, jsonLdObjects) {
     findObject(nextData, (value) => (value?.listingId || value?.id) && (value?.price || value?.bedrooms || value?.branch))
     ?? findObject(nextData, (value) => (value?.price || value?.beds) && (value?.title || value?.address))
     ?? {};
+  // Fallback: Zoopla embeds listing analytics in an application/json script when
+  // __NEXT_DATA__ is absent (client-side-rendered pages as of 2026).
+  const analytics = extractZooplaAnalyticsJson(html);
   const features = normalizeFeatures([
     ...collectStrings(listing?.features),
     ...collectStrings(listing?.key_features),
     ...collectStrings(listing?.tags),
   ]);
+  const rawId = listing?.listingId ?? listing?.id ?? analytics?.listing_id;
   return {
-    id: firstNonEmpty(listing?.listingId != null ? `zoopla-${listing.listingId}` : undefined, listing?.id != null ? `zoopla-${listing.id}` : undefined, createListingId(url)),
+    id: firstNonEmpty(rawId != null ? `zoopla-${rawId}` : undefined, createListingId(url)),
     title: firstNonEmpty(listing?.title, listing?.propertyType, extractTitleTag(html)),
-    price: firstInt(coerceInt(listing?.price), coerceInt(listing?.pricing?.value), extractCurrencyInt(pageText)),
-    bedrooms: firstInt(coerceInt(listing?.beds), coerceInt(listing?.bedrooms), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
-    bathrooms: firstInt(coerceInt(listing?.baths), coerceInt(listing?.bathrooms), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
-    location: firstNonEmpty(listing?.address, listing?.location, listing?.branch?.displayAddress, stringAtPath(pickBestJsonLd(jsonLdObjects), ["address", "addressLocality"])),
+    price: firstInt(coerceInt(listing?.price), coerceInt(listing?.pricing?.value), coerceInt(analytics?.price), extractCurrencyInt(pageText)),
+    bedrooms: firstInt(coerceInt(listing?.beds), coerceInt(listing?.bedrooms), coerceInt(analytics?.num_beds), regexInt(pageText, /(\d+)\s*(?:bed|bedroom)/i)),
+    bathrooms: firstInt(coerceInt(listing?.baths), coerceInt(listing?.bathrooms), coerceInt(analytics?.num_baths), regexInt(pageText, /(\d+)\s*(?:bath|bathroom)/i)),
+    location: firstNonEmpty(
+      listing?.address,
+      listing?.location,
+      listing?.branch?.displayAddress,
+      analytics?.display_address,
+      stringAtPath(pickBestJsonLd(jsonLdObjects), ["address", "addressLocality"]),
+    ),
     description: firstNonEmpty(listing?.description, extractMeta(html, "name=\"description\"", "content")),
     features,
     source_url: firstNonEmpty(listing?.canonicalUrl, extractCanonicalUrl(html), url),

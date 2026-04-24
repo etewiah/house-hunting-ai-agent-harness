@@ -419,6 +419,64 @@ FIXTURE_CASES = [
             "min_quality_score": 70,
         },
     ),
+    # ── Real captured fixtures (sourceType: real) ─────────────────────────────
+    (
+        "rightmove_live_ashton.html",
+        "https://www.rightmove.co.uk/properties/173906975",
+        {
+            "parser": "rightmove",
+            "title_includes": "Welbeck Street South",
+            "price": 130000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "location_includes": "Ashton-under-Lyne",
+            "field_sources": {
+                "price": "site_specific",
+                "bedrooms": "site_specific",
+                "bathrooms": "site_specific",
+                "location": "site_specific",
+            },
+            "min_quality_score": 90,
+        },
+    ),
+    (
+        "zoopla_live_manchester.html",
+        "https://www.zoopla.co.uk/for-sale/details/72506307/",
+        {
+            "parser": "zoopla",
+            "title_includes": "Popworks Building",
+            "price": 249500,
+            "bedrooms": 2,
+            "bathrooms": 2,
+            "location_includes": "Ancoats",
+            "field_sources": {
+                "price": "site_specific",
+                "bedrooms": "site_specific",
+                "bathrooms": "site_specific",
+                "location": "site_specific",
+            },
+            "min_quality_score": 90,
+        },
+    ),
+    (
+        "onthemarket_live_stockport.html",
+        "https://www.onthemarket.com/details/18697045/",
+        {
+            "parser": "onthemarket",
+            "title_includes": "Harrogate Road",
+            "price": 190000,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "location_includes": "Stockport",
+            "field_sources": {
+                "price": "site_specific",
+                "bedrooms": "site_specific",
+                "bathrooms": "site_specific",
+                "location": "site_specific",
+            },
+            "min_quality_score": 90,
+        },
+    ),
 ]
 
 
